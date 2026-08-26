@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+MIDlet-1: Army2 Offline, /icon.png, com.teamobi.mobiarmy2.GameMidlet
+MIDlet-Vendor: By CheeHouse
+MicroEdition-Configuration: CLDC-1.1
+MIDlet-Name: Army2 Offline
+MIDlet-Version: 1.5.33
+Created-By: 1.8.0_492 (Temurin)
+MIDlet-Icon: /icon.png
+MicroEdition-Profile: MIDP-2.0
+

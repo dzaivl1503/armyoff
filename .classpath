@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/microemulator.jar"/>
+	<classpathentry kind="lib" path="lib/midpapi20.jar"/>
+	<classpathentry kind="lib" path="lib/cldcapi11.jar"/>
+	<classpathentry kind="lib" path="lib/microemu-jsr-135.jar"/>
+	<classpathentry kind="lib" path="lib/microemu-jsr-75.jar"/>
+	<classpathentry kind="lib" path="lib/microemu-nokiaui.jar"/>
+	<classpathentry kind="lib" path="lib/microemu-device-resizable.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
