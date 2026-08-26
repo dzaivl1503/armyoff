@@ -128,6 +128,24 @@ public class Army2Server {
             } catch (Exception ignored) {}
             try (Connection conn = getDbConnection()) {
                 System.out.println("[MYSQL] Successfully connected to MySQL database `" + DB_NAME + "` at " + DB_HOST + ":" + DB_PORT);
+                
+                // Create user_guns table if not exists
+                try (Statement stmt = conn.createStatement()) {
+                    String sqlCreateGuns = "CREATE TABLE IF NOT EXISTS `user_guns` ("
+                        + "`id` INT AUTO_INCREMENT PRIMARY KEY, "
+                        + "`username` VARCHAR(64) NOT NULL, "
+                        + "`gun_id` INT NOT NULL, "
+                        + "`level` INT NOT NULL DEFAULT 1, "
+                        + "`exp` BIGINT NOT NULL DEFAULT 0, "
+                        + "`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                        + "UNIQUE KEY `user_gun_unique` (`username`, `gun_id`), "
+                        + "INDEX `idx_gun_rank` (`gun_id`, `level` DESC, `exp` DESC)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+                    stmt.execute(sqlCreateGuns);
+                } catch (Exception e) {
+                    System.err.println("[MYSQL] Error ensuring user_guns table: " + e.getMessage());
+                }
+
                 String sqlUsers = "SELECT username, password, xu, luong, level, exp, cup, is_banned, created_at FROM users";
                 try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sqlUsers)) {
                     while (rs.next()) {
@@ -147,6 +165,32 @@ public class Army2Server {
                     System.out.println("[MYSQL] Loaded " + usersMap.size() + " users from MySQL database table `users`");
                     mysqlLoaded = true;
                 }
+
+                // Load gun levels from user_guns
+                try {
+                    String sqlGuns = "SELECT username, gun_id, level, exp FROM user_guns";
+                    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sqlGuns)) {
+                        int gunRows = 0;
+                        while (rs.next()) {
+                            String uName = rs.getString("username");
+                            int gunId = rs.getInt("gun_id");
+                            int lvl = rs.getInt("level");
+                            long exp = rs.getLong("exp");
+                            UserRecord u = usersMap.get(uName.toLowerCase());
+                            if (u != null) {
+                                if (u.gunLevels != null && gunId >= 0 && gunId < u.gunLevels.length) {
+                                    u.gunLevels[gunId] = Math.max(1, lvl);
+                                }
+                                if (u.gunExp != null && gunId >= 0 && gunId < u.gunExp.length) {
+                                    u.gunExp[gunId] = exp;
+                                }
+                                gunRows++;
+                            }
+                        }
+                        System.out.println("[MYSQL] Loaded " + gunRows + " gun records from MySQL table `user_guns`");
+                    }
+                } catch (Exception ignored) {}
+
                 String sqlMissions = "SELECT mission_id, gun_id, name, description, target_wins, reward_xu, reward_luong, reward_exp FROM missions ORDER BY id ASC";
                 try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sqlMissions)) {
                     missionsList.clear();
@@ -303,6 +347,7 @@ public class Army2Server {
         long exp = 0;
         int cup = 0;
         int[] gunLevels = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        long[] gunExp = new long[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         boolean isBanned = false;
         String createdAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
 
@@ -667,24 +712,14 @@ public class Army2Server {
                 byte[] blob = readRequestBody(exchange);
                 System.out.println("[SERVER SAVE] Received PUT/POST save data payload: " + blob.length + " bytes for `" + username + "`");
                 if (blob.length > 0) {
-                    int extractedXu = -1, extractedLuong = -1, extractedLevel = -1, extractedExp = -1, extractedCup = -1;
-                    try {
-                        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(blob));
-                        int magic = dis.readInt();
-                        if (magic == 1296118322) {
-                            byte ver = dis.readByte();
-                            String pName = dis.readUTF();
-                            extractedXu = dis.readInt();
-                            extractedLuong = dis.readInt();
-                            int gun = dis.readInt();
-                            extractedLevel = dis.readInt();
-                            extractedExp = dis.readInt();
-                            int nextExp = dis.readInt();
-                            extractedCup = dis.readInt();
-                        }
-                    } catch (Exception ignored) {}
-
-                    System.out.println("[SERVER SAVE] Decoded stats -> Xu: " + extractedXu + ", Luong: " + extractedLuong + ", Level: " + extractedLevel + ", Exp: " + extractedExp + ", Cup: " + extractedCup);
+                    UserRecord rec = usersMap.get(username.toLowerCase());
+                    if (rec == null) {
+                        rec = new UserRecord(username, "");
+                        usersMap.put(username.toLowerCase(), rec);
+                    }
+                    
+                    decodeSaveStatsAndGunLevels(blob, rec);
+                    System.out.println("[SERVER SAVE] Decoded stats -> Xu: " + rec.xu + ", Luong: " + rec.luong + ", Level: " + rec.level + ", Exp: " + rec.exp + ", Cup: " + rec.cup);
                     try (FileOutputStream fos = new FileOutputStream(saveFile)) { fos.write(blob); }
 
                     if ("mysql".equalsIgnoreCase(DB_TYPE)) {
@@ -695,32 +730,37 @@ public class Army2Server {
                                 ps.setBytes(2, blob);
                                 ps.executeUpdate();
                             }
-                            if (extractedXu >= 0) {
+                            if (rec.xu >= 0) {
                                 String sqlUser = "UPDATE users SET xu = ?, luong = ?, level = ?, exp = ?, cup = ? WHERE LOWER(username) = ?";
                                 try (PreparedStatement ps = conn.prepareStatement(sqlUser)) {
-                                    ps.setInt(1, extractedXu);
-                                    ps.setInt(2, extractedLuong);
-                                    ps.setInt(3, extractedLevel);
-                                    ps.setInt(4, extractedExp);
-                                    ps.setInt(5, extractedCup);
+                                    ps.setInt(1, rec.xu);
+                                    ps.setInt(2, rec.luong);
+                                    ps.setInt(3, rec.level);
+                                    ps.setLong(4, rec.exp);
+                                    ps.setInt(5, rec.cup);
                                     ps.setString(6, username.toLowerCase());
                                     ps.executeUpdate();
                                 }
                             }
-                            System.out.println("[MYSQL] Saved game data for `" + username + "` into MySQL `player_saves` and updated `users` table!");
+                            if (rec.gunLevels != null) {
+                                String sqlGun = "REPLACE INTO user_guns (username, gun_id, level, exp, updated_at) VALUES (?, ?, ?, ?, NOW())";
+                                try (PreparedStatement psGun = conn.prepareStatement(sqlGun)) {
+                                    for (int g = 0; g < rec.gunLevels.length; ++g) {
+                                        psGun.setString(1, username);
+                                        psGun.setInt(2, g);
+                                        psGun.setInt(3, rec.gunLevels[g]);
+                                        psGun.setLong(4, (rec.gunExp != null && g < rec.gunExp.length) ? rec.gunExp[g] : 0);
+                                        psGun.addBatch();
+                                    }
+                                    psGun.executeBatch();
+                                }
+                            }
+                            System.out.println("[MYSQL] Saved game data & all gun levels for `" + username + "` into MySQL `player_saves`, `users`, and `user_guns`!");
                         } catch (Exception e) {
                             System.err.println("[MYSQL] Error updating save in MySQL: " + e.getMessage());
                         }
                     }
 
-                    UserRecord rec = usersMap.get(username.toLowerCase());
-                    if (rec != null && extractedXu >= 0) {
-                        rec.xu = extractedXu;
-                        rec.luong = extractedLuong;
-                        rec.level = extractedLevel;
-                        rec.exp = extractedExp;
-                        rec.cup = extractedCup;
-                    }
                     saveUsersDatabase();
                     sendJsonResponse(exchange, 200, "{\"ok\":true,\"message\":\"Đã đồng bộ lên CSDL MySQL!\"}");
                 } else {
@@ -730,6 +770,114 @@ public class Army2Server {
                 sendJsonResponse(exchange, 405, "{\"ok\":false,\"message\":\"Method not allowed\"}");
             }
         }
+    }
+
+    private static void decodeSaveStatsAndGunLevels(byte[] blob, UserRecord u) {
+        if (blob == null || blob.length < 20 || u == null) return;
+        try {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(blob));
+            int magic = dis.readInt();
+            if (magic != 1296118322) return;
+            byte ver = dis.readByte();
+            String pName = dis.readUTF();
+            u.xu = dis.readInt();
+            u.luong = dis.readInt();
+            int curGun = dis.readInt();
+            u.level = dis.readInt();
+            u.exp = dis.readInt();
+            int nextExp = dis.readInt();
+            u.cup = dis.readInt();
+            byte levelPercen = dis.readByte();
+            short point = dis.readShort();
+
+            // 10 guns unlock info
+            for (int i = 0; i < 10; ++i) {
+                dis.readByte();
+                dis.readInt();
+                dis.readInt();
+                dis.readBoolean();
+            }
+            // 10 guns equips
+            for (int i = 0; i < 10; ++i) {
+                for (int j = 0; j < 5; ++j) {
+                    dis.readShort();
+                }
+            }
+            // 36 items
+            for (int i = 0; i < 36; ++i) dis.readByte();
+
+            // Chest items
+            try {
+                short chestCount = dis.readShort();
+                if (chestCount > 0) {
+                    dis.skipBytes(chestCount * 16);
+                }
+                if (ver >= 3) {
+                    short wornCount = dis.readShort();
+                    if (wornCount > 0) dis.skipBytes(wornCount * 4);
+                }
+            } catch (Exception ignored) {}
+
+            // Missions
+            try {
+                dis.skipBytes(18 * 4);
+                dis.skipBytes(54);
+                dis.readInt();
+                dis.readInt();
+            } catch (Exception ignored) {}
+
+            // 10 guns class progress
+            if (ver >= 2) {
+                try {
+                    for (int i = 0; i < 10; ++i) {
+                        int gExp = dis.readInt();
+                        int gLvl = dis.readInt();
+                        int gPct = dis.readInt();
+                        int gNext = dis.readInt();
+                        short gPt = dis.readShort();
+                        for (int a = 0; a < 5; ++a) dis.readShort();
+                        if (u.gunLevels != null && i < u.gunLevels.length) {
+                            u.gunLevels[i] = Math.max(1, gLvl);
+                        }
+                        if (u.gunExp != null && i < u.gunExp.length) {
+                            u.gunExp[i] = gExp;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // Squad items
+            if (ver >= 4) {
+                try {
+                    short teamCount = dis.readShort();
+                    if (teamCount > 0) dis.skipBytes(teamCount * 3);
+                } catch (Exception ignored) {}
+            }
+
+            // Gun 10 (Draby)
+            if (ver >= 5) {
+                try {
+                    dis.skipBytes(10);
+                    dis.skipBytes(10);
+                    int gExp10 = dis.readInt();
+                    int gLvl10 = dis.readInt();
+                    int gPct10 = dis.readInt();
+                    int gNext10 = dis.readInt();
+                    short gPt10 = dis.readShort();
+                    for (int a = 0; a < 5; ++a) dis.readShort();
+                    if (u.gunLevels != null && 10 < u.gunLevels.length) {
+                        u.gunLevels[10] = Math.max(1, gLvl10);
+                    }
+                    if (u.gunExp != null && 10 < u.gunExp.length) {
+                        u.gunExp[10] = gExp10;
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (curGun >= 0 && curGun < u.gunLevels.length && u.gunLevels[curGun] < u.level) {
+                u.gunLevels[curGun] = u.level;
+            }
+        } catch (Exception ignored) {}
     }
 
     static class StatusHandler implements HttpHandler {
@@ -753,6 +901,57 @@ public class Army2Server {
                 } catch (Exception ignored) {}
             }
 
+            // Try fetching real-time sorted data directly from MySQL
+            if ("mysql".equalsIgnoreCase(DB_TYPE)) {
+                try (Connection conn = getDbConnection()) {
+                    String sql;
+                    if (type >= 4 && type <= 15) {
+                        int targetGun = type - 4;
+                        sql = "SELECT g.username, g.level, g.exp, u.xu, u.luong, u.cup FROM user_guns g LEFT JOIN users u ON LOWER(g.username) = LOWER(u.username) WHERE g.gun_id = " + targetGun + " AND (u.is_banned IS NULL OR u.is_banned = 0) ORDER BY g.level DESC, g.exp DESC, g.updated_at ASC LIMIT 20";
+                    } else if (type == 1) {
+                        sql = "SELECT username, level, exp, xu, luong, cup FROM users WHERE is_banned = 0 ORDER BY xu DESC, level DESC LIMIT 20";
+                    } else if (type == 2) {
+                        sql = "SELECT username, level, exp, xu, luong, cup FROM users WHERE is_banned = 0 ORDER BY luong DESC, level DESC LIMIT 20";
+                    } else if (type == 3) {
+                        sql = "SELECT username, level, exp, xu, luong, cup FROM users WHERE is_banned = 0 ORDER BY cup DESC, level DESC LIMIT 20";
+                    } else {
+                        sql = "SELECT username, level, exp, xu, luong, cup FROM users WHERE is_banned = 0 ORDER BY level DESC, exp DESC, last_login DESC LIMIT 20";
+                    }
+
+                    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("{\"ok\":true,\"type\":").append(type).append(",\"data\":[");
+                        int count = 0;
+                        while (rs.next()) {
+                            if (count > 0) sb.append(",");
+                            String uName = rs.getString("username");
+                            int lvl = rs.getInt("level");
+                            int xu = rs.getInt("xu");
+                            int luong = rs.getInt("luong");
+                            int cup = rs.getInt("cup");
+                            int gunId = (type >= 4 && type <= 15) ? (type - 4) : 0;
+
+                            sb.append("{\"username\":\"").append(escapeJson(uName)).append("\"")
+                              .append(",\"gun\":").append(gunId)
+                              .append(",\"level\":").append(lvl)
+                              .append(",\"xu\":").append(xu)
+                              .append(",\"luong\":").append(luong)
+                              .append(",\"cup\":").append(cup)
+                              .append("}");
+                            count++;
+                        }
+                        sb.append("]}");
+                        if (count > 0) {
+                            sendJsonResponse(exchange, 200, sb.toString());
+                            return;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("[MYSQL] Leaderboard query error: " + e.getMessage() + ". Falling back to memory list.");
+                }
+            }
+
+            // Fallback in-memory sorting
             List<UserRecord> list = new ArrayList<>(usersMap.values());
             final int fType = type;
             list.sort(new Comparator<UserRecord>() {
@@ -777,16 +976,14 @@ public class Army2Server {
                 UserRecord u = list.get(i);
                 int gunId = (fType >= 4 && fType <= 15) ? (fType - 4) : 0;
                 int showLvl = (fType >= 4 && fType <= 15) ? ((u.gunLevels != null && gunId < u.gunLevels.length) ? u.gunLevels[gunId] : 1) : u.level;
-                String scoreStr;
-                if (fType == 1) scoreStr = u.xu + " Xu";
-                else if (fType == 2) scoreStr = u.luong + " Lượng";
-                else if (fType == 3) scoreStr = u.cup + " Cúp";
-                else scoreStr = "Lv " + showLvl;
 
                 sb.append("{\"username\":\"").append(escapeJson(u.username)).append("\"")
                   .append(",\"gun\":").append(gunId)
                   .append(",\"level\":").append(showLvl)
-                  .append(",\"score\":\"").append(scoreStr).append("\"}");
+                  .append(",\"xu\":").append(u.xu)
+                  .append(",\"luong\":").append(u.luong)
+                  .append(",\"cup\":").append(u.cup)
+                  .append("}");
                 if (i < limit - 1) sb.append(",");
             }
             sb.append("]}");

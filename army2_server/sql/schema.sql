@@ -32,6 +32,17 @@ CREATE TABLE IF NOT EXISTS `player_saves` (
     CONSTRAINT `fk_player_save_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `user_guns` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(64) NOT NULL,
+    `gun_id` INT NOT NULL,
+    `level` INT NOT NULL DEFAULT 1,
+    `exp` BIGINT NOT NULL DEFAULT 0,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `user_gun_unique` (`username`, `gun_id`),
+    INDEX `idx_gun_rank` (`gun_id`, `level` DESC, `exp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS `missions` (
     `id` INT NOT NULL,
     `level` INT NOT NULL,

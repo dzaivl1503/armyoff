@@ -31,14 +31,24 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 if not exist bin mkdir bin
-"%JAVAC_CMD%" -encoding UTF-8 -d bin src/Army2Server.java
+"%JAVAC_CMD%" -cp "lib/*" -encoding UTF-8 -d bin src/Army2Server.java
 if %ERRORLEVEL% NEQ 0 (
     echo [LOI] Bien dich that bai!
     pause
     exit /b 1
 )
 
-echo Main-Class: Army2Server> manifest.txt
+if exist "lib\mysql-connector-j-8.3.0.jar" (
+    cd bin
+    "%JAR_CMD%" xf "..\lib\mysql-connector-j-8.3.0.jar"
+    cd ..
+)
+
+(
+echo Main-Class: Army2Server
+echo Class-Path: lib/mysql-connector-j-8.3.0.jar
+) > manifest.txt
+
 "%JAR_CMD%" cfm Army2Server.jar manifest.txt -C bin .
-echo [OK] Da tao thanh cong Army2Server.jar!
+echo [OK] Da tao thanh cong Army2Server.jar (Fat JAR)!
 pause

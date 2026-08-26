@@ -44,6 +44,7 @@ extends CScreen {
     int disY = 40;
     boolean isNext;
     public String typeList;
+    public String subHeaderRight = "";
     int pa = 0;
     boolean trans = false;
     int pxFirst;
@@ -230,7 +231,9 @@ extends CScreen {
         if (this.typeList != null && this.typeList.length() > 0) {
             Font.bigFont.drawString(mGraphics2, this.typeList, CCanvas.width / 2, 3, mGraphics.HCENTER | mGraphics.TOP);
             Font.normalYFont.drawString(mGraphics2, Language.name(), 10, 28, 0);
-            Font.normalYFont.drawString(mGraphics2, this.typeList, CCanvas.width - 10, 28, 1);
+            if (this.subHeaderRight != null && this.subHeaderRight.length() > 0) {
+                Font.normalYFont.drawString(mGraphics2, this.subHeaderRight, CCanvas.width - 10, 28, 1);
+            }
         } else if (this.type != 5) {
             if (this.type > 0) {
                 Font.bigFont.drawString(mGraphics2, this.title[this.type], CCanvas.width / 2, 3, mGraphics.HCENTER | mGraphics.TOP);
