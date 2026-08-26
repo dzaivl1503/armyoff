@@ -8,6 +8,7 @@ import CLib.mSystem;
 import Equipment.PlayerEquip;
 import com.teamobi.mobiarmy2.GameMidlet;
 import com.teamobi.mobiarmy2.MotherCanvas;
+import com.teamobi.mobiarmy2.OfflineLeaderboard;
 import com.teamobi.mobiarmy2.OfflineMission;
 import com.teamobi.mobiarmy2.OfflineSave;
 import com.teamobi.mobiarmy2.OfflineTeamItems;
@@ -169,16 +170,17 @@ extends CScreen {
         curSubMenuSelect = 0;
         if (n == 0) {
             MENU_CHOINGAY = 0;
-            MENU_CUAHANG = 1;
-            MENU_TINTUC = (byte)-1;
-            MENU_CAUHINH = (byte)2;
-            MENU_GIOITHIEU = (byte)3;
-            MENU_PHIENBAN = (byte)4;
             MENU_DANGNHAP = 1;
-            menuString = new String[]{Language.startGame(), "CLOUD SAVE", "C\u00c0I \u0110\u1eb6T", "GI\u1edaI THI\u1ec6U", "PHI\u00caN B\u1ea2N"};
-            MENU_LAPDOI = (byte)5;
+            MENU_TINTUC = (byte)2;
+            MENU_CAUHINH = (byte)3;
+            MENU_GIOITHIEU = (byte)4;
+            MENU_PHIENBAN = (byte)5;
+            MENU_CUAHANG = (byte)-1;
+            MENU_QUANGCAO = (byte)-1;
+            menuString = new String[]{Language.startGame(), "CLOUD SAVE", "BẢNG XẾP HẠNG", "CÀI ĐẶT", "GIỚI THIỆU", "PHIÊN BẢN"};
+            MENU_LAPDOI = (byte)7;
             boolean bl = TerrainMidlet.myInfo != null && TerrainMidlet.myInfo.getSquadSize() > 0;
-            MenuScr.subMenuString[MenuScr.MENU_LAPDOI] = bl ? new String[]{"CH\u1eccN TH\u00c0NH VI\u00caN", "\u0110\u1ed4I NH\u00c2N V\u1eacT"} : new String[]{"CH\u1eccN TH\u00c0NH VI\u00caN"};
+            MenuScr.subMenuString[MenuScr.MENU_LAPDOI] = bl ? new String[]{"CHỌN THÀNH VIÊN", "ĐỔI NHÂN VẬT"} : new String[]{"CHỌN THÀNH VIÊN"};
         }
         if (n == 1) {
             MENU_CHOINGAY = 0;
@@ -189,13 +191,13 @@ extends CScreen {
             MENU_DANGNHAP = (byte)-1;
             menuString = new String[]{Language.startGame(), Language.CUAHANG(), Language.information()};
         }
-        MenuScr.subMenuString[MenuScr.MENU_CHOINGAY] = new String[]{"CH\u01a0I NGAY", Language.selectCharactor(), "L\u1eacP \u0110\u1ed8I", Language.CUAHANG(), Language.NANGCAP(), Language.INVENTORY(), "CH\u1eccN ITEM"};
+        MenuScr.subMenuString[MenuScr.MENU_CHOINGAY] = new String[]{"CHƠI NGAY", Language.selectCharactor(), "LẬP ĐỘI", Language.CUAHANG(), Language.NANGCAP(), Language.INVENTORY(), "CHỌN ITEM"};
         if (MENU_TINTUC >= 0) {
-            MenuScr.subMenuString[MenuScr.MENU_TINTUC] = new String[]{Language.achievement(), Language.banthan()};
+            MenuScr.subMenuString[MenuScr.MENU_TINTUC] = OfflineLeaderboard.TOP_MENU_LABELS;
         }
         MenuScr.subMenuString[6] = BOSS_ROOM_NAMES;
-        MenuScr.subMenuString[MenuScr.MENU_CUAHANG] = new String[]{Language.shop(), Language.shop_eq(), Language.DODACBIET(), Language.ITEM_DOI()};
-        MenuScr.subMenuString[MenuScr.MENU_NGAUNHIEN] = new String[]{"1 VS 1", "2 VS 2", "3 VS 3", "4 VS 4", "\u0110\u1ea4U TR\u00d9M"};
+        MenuScr.subMenuString[8] = new String[]{Language.shop(), Language.shop_eq(), Language.DODACBIET(), Language.ITEM_DOI()};
+        MenuScr.subMenuString[9] = BATTLE_MODE_ITEMS;
     }
 
     public MenuScr() {
@@ -538,12 +540,8 @@ extends CScreen {
             } else if (MENU_DANGNHAP >= 0 && this.select == MENU_DANGNHAP) {
                 this.hide = true;
                 this.doOpenCloudLogin();
-            } else if (this.select == MENU_CUAHANG) {
-                this.hide = false;
-                this.activeCroll(1, this.select);
-            } else if (this.select == MENU_QUANGCAO) {
-                this.goToGame();
             } else if (this.select == MENU_TINTUC) {
+                this.hide = false;
                 this.activeCroll(1, this.select);
             } else if (MENU_CAUHINH >= 0 && this.select == MENU_CAUHINH) {
                 this.hide = true;
@@ -556,7 +554,7 @@ extends CScreen {
                 CCanvas.startOKDlg(GIOITHIEU_TEXT);
             } else if (MENU_PHIENBAN >= 0 && this.select == MENU_PHIENBAN) {
                 this.hide = true;
-                CCanvas.startOKDlg("Phi\u00ean b\u1ea3n Offline: " + GameMidlet.OFFLINE_VERSION_TEXT);
+                CCanvas.startOKDlg("Phiên bản Offline: " + GameMidlet.OFFLINE_VERSION_TEXT);
             }
         } else if (curMenuLevel == 1) {
             if (curMenuSelect == MENU_CHOINGAY) {
@@ -584,7 +582,7 @@ extends CScreen {
                         this.hide = false;
                         curSubMenuSelect = 4;
                         this.select = 0;
-                        this.activeCroll(2, MENU_CUAHANG);
+                        this.activeCroll(2, 8);
                         break;
                     }
                     case 4: {
@@ -601,23 +599,12 @@ extends CScreen {
                     case 6: {
                         this.hide = true;
                         this.doChooseItemLoadout();
+                        break;
                     }
                 }
             } else if (curMenuSelect == MENU_TINTUC) {
                 this.hide = true;
-                switch (this.select) {
-                    case 0: {
-                        if (CCanvas.missionScreen == null) {
-                            CCanvas.missionScreen = new MissionScreen();
-                        }
-                        CCanvas.missionScreen.setMission(OfflineMission.buildMissionList());
-                        CCanvas.missionScreen.show();
-                        break;
-                    }
-                    case 1: {
-                        this.doLevelUp();
-                    }
-                }
+                OfflineLeaderboard.showLeaderboard(this.select);
             } else if (curMenuSelect == MENU_CUAHANG) {
                 this.hide = true;
                 this.doShopMenuSelect();
@@ -653,6 +640,7 @@ extends CScreen {
                     }
                     case 4: {
                         this.doShowOfflineInfo();
+                        break;
                     }
                 }
             } else if (curMenuSelect == MENU_CHOINGAY && curSubMenuSelect == 3) {
@@ -664,8 +652,6 @@ extends CScreen {
                 } else if (this.select == 1) {
                     this.doOpenSquadSwitchPopup();
                 }
-            } else if (curMenuSelect == MENU_TINTUC) {
-                GameService.gI().bangxephang((byte)this.select, 0);
             }
         }
         this.getRectHeight();
@@ -1159,7 +1145,7 @@ extends CScreen {
         MENU_CHONBAN = (byte)9;
         BATTLE_MODE_ITEMS = new String[]{"\u0110\u1ea4U BOSS", "PVP BOT", "MULTIPLAYER", "NHI\u1ec6M V\u1ee4", "XEM TH\u00d4NG TIN"};
         isTraining = false;
-        subMenuString = new String[10][];
+        subMenuString = new String[20][];
         MenuScr.subMenuString[7] = new String[]{Language.topCaothu(), Language.topDaiGiaXu(), Language.topDaigiaLuong(), Language.topCaothuTuan(), Language.topXuTuan()};
         MenuScr.subMenuString[5] = new String[]{Language.option(), Language.otherGame(), "ABOUT"};
         MenuScr.subMenuString[9] = BATTLE_MODE_ITEMS;

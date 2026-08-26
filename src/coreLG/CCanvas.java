@@ -350,19 +350,22 @@ implements IActionListener {
                     break;
                 }
                 case -22:
-                case -7: {
+                case -7:
+                case 113: {
                     CCanvas.keyHold[13] = true;
                     CCanvas.keyPressed[13] = true;
                     break;
                 }
                 case -21:
-                case -6: {
+                case -6:
+                case 112: {
                     CCanvas.keyHold[12] = true;
                     CCanvas.keyPressed[12] = true;
                     break;
                 }
                 case -5:
-                case 10: {
+                case 10:
+                case 13: {
                     CCanvas.keyHold[5] = true;
                     CCanvas.keyPressed[5] = true;
                     break;
@@ -416,12 +419,12 @@ implements IActionListener {
             curScr.onPointerPressed(0, 0, pointer);
             return;
         }
-        if (curScr != null && !(curScr instanceof GameScr)) {
-            curScr.onPointerPressed(0, 0, pointer);
-            return;
-        }
         if (curScr != null) {
             curScr.keyPressed(n);
+            if (!(curScr instanceof GameScr)) {
+                curScr.onPointerPressed(0, 0, pointer);
+                return;
+            }
         }
     }
 
@@ -447,21 +450,24 @@ implements IActionListener {
                 return;
             }
             case -22:
-            case -7: {
+            case -7:
+            case 113: {
                 CCanvas.keyHold[13] = false;
                 CCanvas.keyReleased[13] = true;
                 CCanvas.keyPressed[13] = false;
                 return;
             }
             case -21:
-            case -6: {
+            case -6:
+            case 112: {
                 CCanvas.keyHold[12] = false;
                 CCanvas.keyReleased[12] = true;
                 CCanvas.keyPressed[12] = false;
                 return;
             }
             case -5:
-            case 10: {
+            case 10:
+            case 13: {
                 CCanvas.keyHold[5] = false;
                 CCanvas.keyReleased[5] = true;
                 CCanvas.keyPressed[5] = false;

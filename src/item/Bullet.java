@@ -472,17 +472,22 @@ public class Bullet {
         if (n8 == 0) {
             return;
         }
-        for (int i = 0; i < this.n1; ++i) {
-            int n9 = i - this.n1 / 2;
-            int n10 = -n7 * n9 / n8;
-            int n11 = n6 * n9 / n8;
-            if (i < this.n1 / 2 + this.n1 / 4 && i > this.n1 / 2 - this.n1 / 4) {
-                mGraphics2.setColor(0xFFFFFF);
+        int stepX = -n7 / n8;
+        int stepY = n6 / n8;
+        if (stepX == 0 && stepY == 0) {
+            if (Math.abs(n6) >= Math.abs(n7)) {
+                stepY = 1;
             } else {
-                mGraphics2.setColor(n5);
+                stepX = 1;
             }
-            mGraphics2.drawLine(n + n10, n2 + n11, n3 + n10, n4 + n11, bl);
         }
+        // Colored outer laser line (1px offset)
+        mGraphics2.setColor(n5);
+        mGraphics2.drawLine(n + stepX, n2 + stepY, n3 + stepX, n4 + stepY, bl);
+        mGraphics2.drawLine(n - stepX, n2 - stepY, n3 - stepX, n4 - stepY, bl);
+        // Crisp bright white center core
+        mGraphics2.setColor(0xFFFFFF);
+        mGraphics2.drawLine(n, n2, n3, n4, bl);
     }
 
     public static short min(short[] sArray) {

@@ -1,14 +1,9 @@
 /*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  javax.microedition.io.Connector
- *  javax.microedition.io.HttpConnection
+ * Mobi Army 2 Offline Cloud Save API & Server Sync Client
  */
 package com.teamobi.mobiarmy2;
 
 import CLib.RMS;
-import com.teamobi.mobiarmy2.JsonLite;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,22 +14,48 @@ import javax.microedition.io.HttpConnection;
 import model.IAction2;
 
 public final class CloudSaveApi {
-    private static final String BASE_URL = "https://emu.cheehouse.io.vn/api";
+    public static final String DEFAULT_BASE_URL = "http://160.191.242.130:8080/api";
     private static final String USER_AGENT = "MobiArmy2Offline/1.0";
     private static final String TOKEN_KEY = "cloudToken";
     private static final String EMAIL_KEY = "cloudEmail";
+    private static final String SERVER_URL_KEY = "cloudServerUrl";
+
+    private static boolean isSyncing = false;
 
     private CloudSaveApi() {
     }
 
+    public static String getServerUrl() {
+        String url = RMS.loadRMSString(SERVER_URL_KEY);
+        if (url == null || url.trim().length() == 0) {
+            return DEFAULT_BASE_URL;
+        }
+        return url.trim();
+    }
+
+    public static void setServerUrl(String url) {
+        if (url == null || url.trim().length() == 0) {
+            RMS.saveRMSString(SERVER_URL_KEY, DEFAULT_BASE_URL);
+        } else {
+            String clean = url.trim();
+            if (clean.endsWith("/")) {
+                clean = clean.substring(0, clean.length() - 1);
+            }
+            if (!clean.endsWith("/api")) {
+                clean = clean + "/api";
+            }
+            RMS.saveRMSString(SERVER_URL_KEY, clean);
+        }
+    }
+
     public static boolean isLoggedIn() {
-        String string = RMS.loadRMSString(TOKEN_KEY);
-        return string != null && string.length() > 0;
+        String token = RMS.loadRMSString(TOKEN_KEY);
+        return token != null && token.length() > 0;
     }
 
     public static String getLinkedEmail() {
-        String string = RMS.loadRMSString(EMAIL_KEY);
-        return string == null ? "" : string;
+        String email = RMS.loadRMSString(EMAIL_KEY);
+        return email == null ? "" : email;
     }
 
     public static void logout() {
@@ -42,297 +63,398 @@ public final class CloudSaveApi {
         RMS.clearRMS(EMAIL_KEY);
     }
 
-    public static void login(final String string, final String string2, final IAction2 iAction2) {
-        new Thread(new Runnable(){
-
+    public static void register(final String username, final String password, final IAction2 callback) {
+        new Thread(new Runnable() {
             public void run() {
-                StringBuffer stringBuffer = new StringBuffer();
-                stringBuffer.append("{\"email\":\"").append(CloudSaveApi.jsonEscape(string)).append("\",\"password\":\"").append(CloudSaveApi.jsonEscape(string2)).append("\"}");
-                RawResponse rawResponse = CloudSaveApi.request("POST", "/auth/login", CloudSaveApi.toUtf8(stringBuffer.toString()), "application/json", false, null, null);
-                Result result = new Result();
-                if (rawResponse == null) {
-                    result.ok = false;
-                    result.error = "Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7.";
-                } else if (rawResponse.status >= 200 && rawResponse.status < 300) {
-                    String string3 = JsonLite.getObject(CloudSaveApi.fromUtf8(rawResponse.body), "data");
-                    String string22 = JsonLite.getString(string3, "token");
-                    if (string22 == null || string22.length() == 0) {
-                        result.ok = false;
-                        result.error = "Ph\u1ea3n h\u1ed3i m\u00e1y ch\u1ee7 kh\u00f4ng h\u1ee3p l\u1ec7.";
+                StringBuffer sb = new StringBuffer();
+                sb.append("{\"email\":\"").append(CloudSaveApi.jsonEscape(username))
+                  .append("\",\"password\":\"").append(CloudSaveApi.jsonEscape(password)).append("\"}");
+
+                RawResponse resp = CloudSaveApi.request("POST", "/auth/register", CloudSaveApi.toUtf8(sb.toString()), "application/json", false, null, null);
+                Result res = new Result();
+                if (resp == null) {
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ (" + getServerUrl() + ").";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    String body = CloudSaveApi.fromUtf8(resp.body);
+                    String data = JsonLite.getObject(body, "data");
+                    String token = JsonLite.getString(data, "token");
+                    if (token == null || token.length() == 0) {
+                        token = JsonLite.getString(body, "token");
+                    }
+                    if (token == null || token.length() == 0) {
+                        res.ok = false;
+                        res.error = "Phản hồi máy chủ không hợp lệ.";
                     } else {
-                        RMS.saveRMSString(CloudSaveApi.TOKEN_KEY, string22);
-                        RMS.saveRMSString(CloudSaveApi.EMAIL_KEY, string);
-                        result.ok = true;
+                        RMS.saveRMSString(TOKEN_KEY, token);
+                        RMS.saveRMSString(EMAIL_KEY, username);
+                        res.ok = true;
+                        res.error = "Đăng ký thành công!";
+                        // Link mission
+                        OfflineMission.onCloudAccountLinked();
                     }
                 } else {
-                    result.ok = false;
-                    result.error = CloudSaveApi.errorMessage(rawResponse);
+                    res.ok = false;
+                    res.error = CloudSaveApi.errorMessage(resp);
                 }
-                iAction2.perform(result);
+                if (callback != null) callback.perform(res);
             }
         }).start();
     }
 
-    public static void uploadSave(final String string, final byte[] byArray, final IAction2 iAction2) {
-        new Thread(new Runnable(){
-
+    public static void login(final String username, final String password, final IAction2 callback) {
+        new Thread(new Runnable() {
             public void run() {
-                RawResponse rawResponse = CloudSaveApi.request("PUT", "/cloud-save/blob", byArray, "application/octet-stream", true, "X-Save-Name", CloudSaveApi.percentEncodeUtf8(string == null ? "" : string));
-                Result result = new Result();
-                if (rawResponse == null) {
-                    result.ok = false;
-                    result.error = "Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7.";
-                } else if (rawResponse.status >= 200 && rawResponse.status < 300) {
-                    result.ok = true;
-                } else {
-                    result.ok = false;
-                    result.error = CloudSaveApi.errorMessage(rawResponse);
-                }
-                iAction2.perform(result);
-            }
-        }).start();
-    }
+                StringBuffer sb = new StringBuffer();
+                sb.append("{\"email\":\"").append(CloudSaveApi.jsonEscape(username))
+                  .append("\",\"password\":\"").append(CloudSaveApi.jsonEscape(password)).append("\"}");
 
-    public static void downloadSave(final String string, final IAction2 iAction2) {
-        new Thread(new Runnable(){
-
-            public void run() {
-                RawResponse rawResponse = CloudSaveApi.request("GET", "/cloud-save/" + string + "/blob", null, null, true, null, null);
-                Result result = new Result();
-                if (rawResponse == null) {
-                    result.ok = false;
-                    result.error = "Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7.";
-                } else if (rawResponse.status >= 200 && rawResponse.status < 300) {
-                    result.ok = true;
-                    result.data = rawResponse.body;
-                } else {
-                    result.ok = false;
-                    result.error = CloudSaveApi.errorMessage(rawResponse);
-                }
-                iAction2.perform(result);
-            }
-        }).start();
-    }
-
-    public static void deleteSave(final String string, final IAction2 iAction2) {
-        new Thread(new Runnable(){
-
-            public void run() {
-                RawResponse rawResponse = CloudSaveApi.request("POST", "/cloud-save/" + string + "/delete", null, null, true, null, null);
-                Result result = new Result();
-                if (rawResponse == null) {
-                    result.ok = false;
-                    result.error = "Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7.";
-                } else if (rawResponse.status >= 200 && rawResponse.status < 300) {
-                    result.ok = true;
-                } else {
-                    result.ok = false;
-                    result.error = CloudSaveApi.errorMessage(rawResponse);
-                }
-                iAction2.perform(result);
-            }
-        }).start();
-    }
-
-    public static void listSaves(final IAction2 iAction2) {
-        new Thread(new Runnable(){
-
-            public void run() {
-                RawResponse rawResponse = CloudSaveApi.request("GET", "/cloud-save", null, null, true, null, null);
-                Result result = new Result();
-                if (rawResponse == null) {
-                    result.ok = false;
-                    result.error = "Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7.";
-                } else if (rawResponse.status >= 200 && rawResponse.status < 300) {
-                    String string = CloudSaveApi.fromUtf8(rawResponse.body);
-                    String string2 = JsonLite.getArrayRaw(string, "data");
-                    Vector vector = JsonLite.splitArrayObjects(string2);
-                    Vector<CloudSaveEntry> vector2 = new Vector<CloudSaveEntry>();
-                    for (int i = 0; i < vector.size(); ++i) {
-                        String string3 = (String)vector.elementAt(i);
-                        CloudSaveEntry cloudSaveEntry = new CloudSaveEntry();
-                        cloudSaveEntry.id = JsonLite.getString(string3, "id");
-                        cloudSaveEntry.name = JsonLite.getString(string3, "name");
-                        cloudSaveEntry.hasData = JsonLite.getBoolean(string3, "hasData");
-                        cloudSaveEntry.createdAt = JsonLite.getString(string3, "createdAt");
-                        vector2.addElement(cloudSaveEntry);
+                RawResponse resp = CloudSaveApi.request("POST", "/auth/login", CloudSaveApi.toUtf8(sb.toString()), "application/json", false, null, null);
+                Result res = new Result();
+                if (resp == null) {
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ (" + getServerUrl() + ").";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    String body = CloudSaveApi.fromUtf8(resp.body);
+                    String data = JsonLite.getObject(body, "data");
+                    String token = JsonLite.getString(data, "token");
+                    if (token == null || token.length() == 0) {
+                        token = JsonLite.getString(body, "token");
                     }
-                    result.ok = true;
-                    result.entries = vector2;
+                    if (token == null || token.length() == 0) {
+                        res.ok = false;
+                        res.error = "Phản hồi máy chủ không hợp lệ.";
+                    } else {
+                        RMS.saveRMSString(TOKEN_KEY, token);
+                        RMS.saveRMSString(EMAIL_KEY, username);
+                        res.ok = true;
+                        // Link mission
+                        OfflineMission.onCloudAccountLinked();
+                        // Auto fetch remote mission config
+                        fetchRemoteConfig(null);
+                    }
                 } else {
-                    result.ok = false;
-                    result.error = CloudSaveApi.errorMessage(rawResponse);
+                    res.ok = false;
+                    res.error = CloudSaveApi.errorMessage(resp);
                 }
-                iAction2.perform(result);
+                if (callback != null) callback.perform(res);
             }
         }).start();
     }
 
-    private static String errorMessage(RawResponse rawResponse) {
-        String string = JsonLite.getString(CloudSaveApi.fromUtf8(rawResponse.body), "message");
-        return string != null && string.length() > 0 ? string : "L\u1ed7i m\u00e1y ch\u1ee7 (" + rawResponse.status + ").";
+    public static void fetchRemoteConfig(final IAction2 callback) {
+        new Thread(new Runnable() {
+            public void run() {
+                RawResponse resp = CloudSaveApi.request("GET", "/game/config", null, null, false, null, null);
+                Result res = new Result();
+                if (resp != null && resp.status >= 200 && resp.status < 300) {
+                    String json = CloudSaveApi.fromUtf8(resp.body);
+                    OfflineMission.applyRemoteConfig(json);
+                    res.ok = true;
+                } else {
+                    res.ok = false;
+                }
+                if (callback != null) callback.perform(res);
+            }
+        }).start();
     }
 
-    /*
-     * WARNING - Removed try catching itself - possible behaviour change.
-     */
-    private static RawResponse request(String string, String string2, byte[] byArray, String string3, boolean bl, String string4, String string5) {
-        HttpConnection httpConnection = null;
-        OutputStream outputStream = null;
-        InputStream inputStream = null;
+    public static void uploadCurrentSave(final IAction2 callback) {
+        byte[] bytes = OfflineSave.exportBytes();
+        uploadSave(getLinkedEmail(), bytes, callback);
+    }
+
+    public static void downloadCurrentSave(final IAction2 callback) {
+        downloadSave("current", new IAction2() {
+            public void perform(Object obj) {
+                Result res = (Result) obj;
+                if (res != null && res.ok && res.data != null && res.data.length > 0) {
+                    OfflineSave.importBytes(res.data);
+                }
+                if (callback != null) callback.perform(res);
+            }
+        });
+    }
+
+    public static void syncSaveSilently() {
+        if (!isLoggedIn() || isSyncing) {
+            return;
+        }
+        isSyncing = true;
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    byte[] bytes = OfflineSave.exportBytes();
+                    if (bytes != null && bytes.length > 0) {
+                        CloudSaveApi.request("PUT", "/cloud-save/blob", bytes, "application/octet-stream", true, "X-Save-Name", CloudSaveApi.percentEncodeUtf8(getLinkedEmail()));
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    isSyncing = false;
+                }
+            }
+        }).start();
+    }
+
+    public static void manualSaveAndSync(final IAction2 callback) {
+        // 1. Instant local RMS save
+        OfflineSave.save();
+
+        if (!isLoggedIn()) {
+            Result res = new Result();
+            res.ok = true;
+            res.flag = false; // local only
+            res.error = "Đã lưu vào máy (RMS). Chưa đăng nhập tài khoản Cloud để đồng bộ lên Server.";
+            if (callback != null) callback.perform(res);
+            return;
+        }
+
+        byte[] bytes = OfflineSave.exportBytes();
+        uploadSave(getLinkedEmail(), bytes, new IAction2() {
+            public void perform(Object obj) {
+                Result res = (Result) obj;
+                if (res != null && res.ok) {
+                    res.flag = true; // synced with server
+                    res.error = "Đã lưu vào máy và đồng bộ lên Server thành công!";
+                } else if (res != null) {
+                    res.flag = false;
+                    res.error = "Đã lưu vào máy (RMS), nhưng không thể gửi lên Server: " + res.error;
+                }
+                if (callback != null) callback.perform(res);
+            }
+        });
+    }
+
+    public static void uploadSave(final String saveName, final byte[] data, final IAction2 callback) {
+        new Thread(new Runnable() {
+            public void run() {
+                String uName = (saveName != null && saveName.length() > 0) ? saveName : getLinkedEmail();
+                int len = data != null ? data.length : 0;
+                System.out.println("[CLIENT SAVE] Uploading save for `" + uName + "` (" + len + " bytes) to " + getServerUrl() + "/cloud-save/blob");
+                RawResponse resp = CloudSaveApi.request("PUT", "/cloud-save/blob", data, "application/octet-stream", true, "X-Save-Name", CloudSaveApi.percentEncodeUtf8(uName == null ? "" : uName));
+                Result res = new Result();
+                if (resp == null) {
+                    System.err.println("[CLIENT SAVE] Connection failed to " + getServerUrl());
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ (" + getServerUrl() + ").";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    System.out.println("[CLIENT SAVE] Upload SUCCESS! Response HTTP " + resp.status);
+                    res.ok = true;
+                } else {
+                    String err = CloudSaveApi.errorMessage(resp);
+                    System.err.println("[CLIENT SAVE] Upload FAILED: HTTP " + resp.status + " -> " + err);
+                    res.ok = false;
+                    res.error = err;
+                }
+                if (callback != null) callback.perform(res);
+            }
+        }).start();
+    }
+
+    public static void downloadSave(final String saveId, final IAction2 callback) {
+        new Thread(new Runnable() {
+            public void run() {
+                RawResponse resp = CloudSaveApi.request("GET", "/cloud-save/" + saveId + "/blob", null, null, true, null, null);
+                Result res = new Result();
+                if (resp == null) {
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ (" + getServerUrl() + ").";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    res.ok = true;
+                    res.data = resp.body;
+                } else {
+                    res.ok = false;
+                    res.error = CloudSaveApi.errorMessage(resp);
+                }
+                if (callback != null) callback.perform(res);
+            }
+        }).start();
+    }
+
+    public static void deleteSave(final String saveId, final IAction2 callback) {
+        new Thread(new Runnable() {
+            public void run() {
+                RawResponse resp = CloudSaveApi.request("POST", "/cloud-save/" + saveId + "/delete", null, null, true, null, null);
+                Result res = new Result();
+                if (resp == null) {
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ.";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    res.ok = true;
+                } else {
+                    res.ok = false;
+                    res.error = CloudSaveApi.errorMessage(resp);
+                }
+                if (callback != null) callback.perform(res);
+            }
+        }).start();
+    }
+
+    public static void listSaves(final IAction2 callback) {
+        new Thread(new Runnable() {
+            public void run() {
+                RawResponse resp = CloudSaveApi.request("GET", "/cloud-save", null, null, true, null, null);
+                Result res = new Result();
+                if (resp == null) {
+                    res.ok = false;
+                    res.error = "Không thể kết nối máy chủ.";
+                } else if (resp.status >= 200 && resp.status < 300) {
+                    String json = CloudSaveApi.fromUtf8(resp.body);
+                    String dataRaw = JsonLite.getArrayRaw(json, "data");
+                    Vector list = JsonLite.splitArrayObjects(dataRaw);
+                    Vector entries = new Vector();
+                    for (int i = 0; i < list.size(); ++i) {
+                        String s = (String) list.elementAt(i);
+                        CloudSaveEntry entry = new CloudSaveEntry();
+                        entry.id = JsonLite.getString(s, "id");
+                        entry.name = JsonLite.getString(s, "name");
+                        entry.hasData = JsonLite.getBoolean(s, "hasData");
+                        entry.createdAt = JsonLite.getString(s, "createdAt");
+                        entries.addElement(entry);
+                    }
+                    res.ok = true;
+                    res.entries = entries;
+                } else {
+                    res.ok = false;
+                    res.error = CloudSaveApi.errorMessage(resp);
+                }
+                if (callback != null) callback.perform(res);
+            }
+        }).start();
+    }
+
+    private static String errorMessage(RawResponse resp) {
+        if (resp == null || resp.body == null || resp.body.length == 0) {
+            return "Lỗi máy chủ (" + (resp != null ? resp.status : -1) + ").";
+        }
+        String msg = JsonLite.getString(CloudSaveApi.fromUtf8(resp.body), "message");
+        return msg != null && msg.length() > 0 ? msg : "Lỗi máy chủ (" + resp.status + ").";
+    }
+
+    private static RawResponse request(String method, String path, byte[] body, String contentType, boolean needAuth, String customHeaderKey, String customHeaderVal) {
+        HttpConnection conn = null;
+        OutputStream os = null;
+        InputStream is = null;
         try {
-            Object object;
-            httpConnection = (HttpConnection)Connector.open((String)(BASE_URL + string2), (int)3, (boolean)true);
+            String fullUrl = getServerUrl() + path;
+            conn = (HttpConnection) Connector.open(fullUrl, 3, true);
             try {
-                httpConnection.setRequestMethod(string);
+                conn.setRequestMethod(method);
+            } catch (IllegalArgumentException e) {
+                conn.setRequestMethod("POST");
             }
-            catch (IllegalArgumentException illegalArgumentException) {
-                string = "POST";
-                httpConnection.setRequestMethod(string);
+            conn.setRequestProperty("User-Agent", USER_AGENT);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Connection", "close");
+            if (contentType != null) {
+                conn.setRequestProperty("Content-Type", contentType);
             }
-            httpConnection.setRequestProperty("User-Agent", USER_AGENT);
-            httpConnection.setRequestProperty("Accept", "application/json");
-            httpConnection.setRequestProperty("Connection", "close");
-            if (string3 != null) {
-                httpConnection.setRequestProperty("Content-Type", string3);
+            if (customHeaderKey != null) {
+                conn.setRequestProperty(customHeaderKey, customHeaderVal);
             }
-            if (string4 != null) {
-                httpConnection.setRequestProperty(string4, string5);
-            }
-            if (bl && (object = RMS.loadRMSString(TOKEN_KEY)) != null && ((String)object).length() > 0) {
-                httpConnection.setRequestProperty("Authorization", "Bearer " + (String)object);
-            }
-            if (byArray != null) {
-                httpConnection.setRequestProperty("Content-Length", String.valueOf(byArray.length));
-                outputStream = httpConnection.openOutputStream();
-                outputStream.write(byArray);
-                outputStream.flush();
-            }
-            object = new RawResponse();
-            ((RawResponse)object).status = httpConnection.getResponseCode();
-            try {
-                inputStream = httpConnection.openInputStream();
-                ((RawResponse)object).body = CloudSaveApi.readAll(inputStream);
-            }
-            catch (Exception exception) {
-                ((RawResponse)object).body = new byte[0];
-            }
-            RawResponse rawResponse2 = (RawResponse)object;
-            return rawResponse2;
-        }
-        catch (Exception exception) {
-            RawResponse rawResponse = null;
-            return rawResponse;
-        }
-        finally {
-            try {
-                if (outputStream != null) {
-                    outputStream.close();
+            if (needAuth) {
+                String token = RMS.loadRMSString(TOKEN_KEY);
+                if (token != null && token.length() > 0) {
+                    conn.setRequestProperty("Authorization", "Bearer " + token);
+                }
+                String email = RMS.loadRMSString(EMAIL_KEY);
+                if (email != null && email.length() > 0) {
+                    conn.setRequestProperty("X-User-Name", email.trim());
                 }
             }
-            catch (Exception exception) {}
-            try {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
+            if (body != null) {
+                conn.setRequestProperty("Content-Length", String.valueOf(body.length));
+                os = conn.openOutputStream();
+                os.write(body);
+                os.flush();
             }
-            catch (Exception exception) {}
+            RawResponse raw = new RawResponse();
+            raw.status = conn.getResponseCode();
             try {
-                if (httpConnection != null) {
-                    httpConnection.close();
-                }
+                is = conn.openInputStream();
+                raw.body = CloudSaveApi.readAll(is);
+            } catch (Exception e) {
+                raw.body = new byte[0];
             }
-            catch (Exception exception) {}
+            return raw;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            try { if (os != null) os.close(); } catch (Exception ignored) {}
+            try { if (is != null) is.close(); } catch (Exception ignored) {}
+            try { if (conn != null) conn.close(); } catch (Exception ignored) {}
         }
     }
 
-    private static byte[] readAll(InputStream inputStream) throws IOException {
+    private static byte[] readAll(InputStream is) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buf = new byte[1024];
         int n;
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        byte[] byArray = new byte[1024];
-        while ((n = inputStream.read(byArray)) != -1) {
-            byteArrayOutputStream.write(byArray, 0, n);
+        while ((n = is.read(buf)) != -1) {
+            baos.write(buf, 0, n);
         }
-        return byteArrayOutputStream.toByteArray();
+        return baos.toByteArray();
     }
 
-    private static byte[] toUtf8(String string) {
+    private static byte[] toUtf8(String s) {
         try {
-            return string.getBytes("UTF-8");
-        }
-        catch (Exception exception) {
-            return string.getBytes();
+            return s.getBytes("UTF-8");
+        } catch (Exception e) {
+            return s.getBytes();
         }
     }
 
-    private static String fromUtf8(byte[] byArray) {
-        if (byArray == null) {
-            return "";
-        }
+    private static String fromUtf8(byte[] b) {
+        if (b == null) return "";
         try {
-            return new String(byArray, "UTF-8");
-        }
-        catch (Exception exception) {
-            return new String(byArray);
+            return new String(b, "UTF-8");
+        } catch (Exception e) {
+            return new String(b);
         }
     }
 
-    private static String jsonEscape(String string) {
-        if (string == null) {
-            return "";
-        }
-        StringBuffer stringBuffer = new StringBuffer();
-        for (int i = 0; i < string.length(); ++i) {
-            char c = string.charAt(i);
+    private static String jsonEscape(String s) {
+        if (s == null) return "";
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
             if (c == '\"' || c == '\\') {
-                stringBuffer.append('\\').append(c);
-                continue;
+                sb.append('\\').append(c);
+            } else if (c == '\n') {
+                sb.append("\\n");
+            } else if (c == '\r') {
+                sb.append("\\r");
+            } else if (c == '\t') {
+                sb.append("\\t");
+            } else if (c >= ' ') {
+                sb.append(c);
             }
-            if (c == '\n') {
-                stringBuffer.append("\\n");
-                continue;
-            }
-            if (c == '\r') {
-                stringBuffer.append("\\r");
-                continue;
-            }
-            if (c == '\t') {
-                stringBuffer.append("\\t");
-                continue;
-            }
-            if (c < ' ') continue;
-            stringBuffer.append(c);
         }
-        return stringBuffer.toString();
+        return sb.toString();
     }
 
-    private static String percentEncodeUtf8(String string) {
-        byte[] byArray = CloudSaveApi.toUtf8(string);
-        StringBuffer stringBuffer = new StringBuffer();
-        for (int i = 0; i < byArray.length; ++i) {
-            boolean bl;
-            int n = byArray[i] & 0xFF;
-            boolean bl2 = bl = n >= 65 && n <= 90 || n >= 97 && n <= 122 || n >= 48 && n <= 57 || n == 45 || n == 95 || n == 46 || n == 126;
-            if (bl) {
-                stringBuffer.append((char)n);
-                continue;
+    private static String percentEncodeUtf8(String s) {
+        byte[] bytes = CloudSaveApi.toUtf8(s);
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < bytes.length; ++i) {
+            int n = bytes[i] & 0xFF;
+            boolean safe = (n >= 65 && n <= 90) || (n >= 97 && n <= 122) || (n >= 48 && n <= 57) || n == 45 || n == 95 || n == 46 || n == 126;
+            if (safe) {
+                sb.append((char) n);
+            } else {
+                sb.append('%');
+                String hex = Integer.toHexString(n).toUpperCase();
+                if (hex.length() < 2) sb.append('0');
+                sb.append(hex);
             }
-            stringBuffer.append('%');
-            String string2 = Integer.toHexString(n).toUpperCase();
-            if (string2.length() < 2) {
-                stringBuffer.append('0');
-            }
-            stringBuffer.append(string2);
         }
-        return stringBuffer.toString();
+        return sb.toString();
     }
 
     private static final class RawResponse {
         int status;
         byte[] body;
-
-        private RawResponse() {
-        }
+        private RawResponse() {}
     }
 
     public static final class CloudSaveEntry {
@@ -350,4 +472,3 @@ public final class CloudSaveApi {
         public Vector entries;
     }
 }
-

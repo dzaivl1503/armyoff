@@ -9,6 +9,40 @@ final class JsonLite {
     private JsonLite() {
     }
 
+    static int getInt(String string, String string2, int defVal) {
+        if (string == null) {
+            return defVal;
+        }
+        int n = JsonLite.findKey(string, string2);
+        if (n < 0) {
+            return defVal;
+        }
+        int n2 = string.indexOf(58, n);
+        if (n2 < 0) {
+            return defVal;
+        }
+        int n3 = JsonLite.skipWs(string, n2 + 1);
+        if (n3 >= string.length()) {
+            return defVal;
+        }
+        int end = n3;
+        while (end < string.length()) {
+            char c = string.charAt(end);
+            if (c == '-' || (c >= '0' && c <= '9')) {
+                ++end;
+            } else {
+                break;
+            }
+        }
+        if (end > n3) {
+            try {
+                return Integer.parseInt(string.substring(n3, end));
+            } catch (Exception ignored) {
+            }
+        }
+        return defVal;
+    }
+
     static String getString(String string, String string2) {
         if (string == null) {
             return null;

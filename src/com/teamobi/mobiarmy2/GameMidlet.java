@@ -740,7 +740,6 @@ implements IActionListener {
     }
 
     public static void startNewOfflineGame(String string) {
-        CloudSaveApi.logout();
         GameMidlet.initOfflineProfile(string);
         OfflineMission.reset();
         OfflineMission.onLogin();
@@ -752,17 +751,11 @@ implements IActionListener {
             return false;
         }
         if (TerrainMidlet.myInfo != null) {
-            if (TerrainMidlet.myInfo.classLevel2 != null && TerrainMidlet.myInfo.classLevel2.length > 0) {
-                if (TerrainMidlet.myInfo.classLevel2[0] < 50) {
-                    TerrainMidlet.myInfo.classLevel2[0] = 50;
-                    TerrainMidlet.myInfo.classPoint[0] = (short)Math.max(TerrainMidlet.myInfo.classPoint[0], 100);
-                    TerrainMidlet.myInfo.classNextExp[0] = OfflineCombat.expThresholdForLevel(50);
+            if (CloudSaveApi.isLoggedIn()) {
+                String email = CloudSaveApi.getLinkedEmail();
+                if (email != null && email.trim().length() > 0) {
+                    TerrainMidlet.myInfo.name = email.trim();
                 }
-            }
-            if (TerrainMidlet.myInfo.gun == 0 && TerrainMidlet.myInfo.level2 < 50) {
-                TerrainMidlet.myInfo.level2 = 50;
-                TerrainMidlet.myInfo.point = (short)Math.max(TerrainMidlet.myInfo.point, 100);
-                TerrainMidlet.myInfo.nextExp = OfflineCombat.expThresholdForLevel(50);
             }
         }
         ChangePlayerCSr.ensureGunData();
@@ -778,15 +771,24 @@ implements IActionListener {
 
     private static void initOfflineProfile(String string) {
         TerrainMidlet.myInfo = new PlayerInfo();
-        TerrainMidlet.myInfo.name = string == null || string.length() == 0 ? "offline-player" : string;
+        String chosenName = string;
+        if (chosenName == null || chosenName.trim().length() == 0) {
+            if (CloudSaveApi.isLoggedIn()) {
+                chosenName = CloudSaveApi.getLinkedEmail();
+            }
+        }
+        if (chosenName == null || chosenName.trim().length() == 0) {
+            chosenName = "Chiến Binh";
+        }
+        TerrainMidlet.myInfo.name = chosenName.trim();
         TerrainMidlet.myInfo.IDDB = 1;
         TerrainMidlet.myInfo.gun = 0;
-        TerrainMidlet.myInfo.xu = 1000000;
-        TerrainMidlet.myInfo.luong = 10000;
-        TerrainMidlet.myInfo.level2 = 50;
+        TerrainMidlet.myInfo.xu = 50000;
+        TerrainMidlet.myInfo.luong = 100;
+        TerrainMidlet.myInfo.level2 = 1;
         TerrainMidlet.myInfo.exp = 0;
-        TerrainMidlet.myInfo.point = 100;
-        TerrainMidlet.myInfo.nextExp = OfflineCombat.expThresholdForLevel(50);
+        TerrainMidlet.myInfo.point = 0;
+        TerrainMidlet.myInfo.nextExp = OfflineCombat.expThresholdForLevel(1);
         TerrainMidlet.myInfo.initClassProgressDefaults();
         TerrainMidlet.myInfo.getAttribute();
         MenuScr.getIdMenu(0);
@@ -796,7 +798,7 @@ implements IActionListener {
         PlayerEquip.applyDefaultOfflineEquipIds(TerrainMidlet.myInfo);
         TerrainMidlet.myInfo.ensureCombatEquip();
         TerrainMidlet.myInfo.getQuanHam();
-        ChangePlayerCSr.ensureGunData();
+        ChangePlayerCSr.initOfflineGunDefaults();
         GameMidlet.initOfflineShop();
     }
 

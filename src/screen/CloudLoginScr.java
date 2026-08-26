@@ -1,10 +1,11 @@
 /*
- * Decompiled with CFR 0.152.
+ * Mobi Army 2 Offline Cloud & Server Account Management Screen
  */
 package screen;
 
 import CLib.mGraphics;
 import com.teamobi.mobiarmy2.CloudSaveApi;
+import com.teamobi.mobiarmy2.GameMidlet;
 import com.teamobi.mobiarmy2.OfflineMission;
 import com.teamobi.mobiarmy2.OfflineSave;
 import coreLG.CCanvas;
@@ -19,8 +20,7 @@ import model.TField;
 import network.Command;
 import screen.CScreen;
 
-public class CloudLoginScr
-extends CScreen {
+public class CloudLoginScr extends CScreen {
     private static final int ROW_H = 16;
     private TField tUser;
     private TField tPass;
@@ -48,28 +48,29 @@ extends CScreen {
 
     private void refreshState() {
         this.linked = CloudSaveApi.isLoggedIn();
-        this.nTab = CCanvas.width >= 200 ? 4 : 3;
+        this.nTab = CCanvas.width >= 200 ? 5 : 4;
         int n = 30;
         int n2 = 20;
         if (this.linked) {
-            this.nTab += 2;
             this.boxW = this.nTab * 32 + 56;
             this.tUser = null;
             this.tPass = null;
-            int n3 = 96;
+            int n3 = 100;
             this.boxH = n + n3 + n2;
             this.boxTop = CCanvas.hieght / 2 - this.boxH / 2;
-            this.center = new Command("Tu\u1ef3 ch\u1ecdn", new IAction(){
-
+            this.center = new Command("Lưu lại", new IAction() {
                 public void perform() {
-                    CloudLoginScr.this.openOptionsMenu();
+                    CloudLoginScr.this.doManualSave();
                 }
             });
-            this.left = null;
-            this.right = new Command(Language.back(), new IAction(){
-
+            this.left = new Command("Tùy chọn", new IAction() {
                 public void perform() {
-                    CloudLoginScr.this.lastScr.show();
+                    CloudLoginScr.this.openLoggedInMenu();
+                }
+            });
+            this.right = new Command("Vào game", new IAction() {
+                public void perform() {
+                    CloudLoginScr.this.enterGame();
                 }
             });
             this.loadSaves();
@@ -87,13 +88,15 @@ extends CScreen {
             this.boxH = n + n9 + n2;
             this.boxTop = CCanvas.hieght / 2 - this.boxH / 2;
             int n10 = this.boxTop + n;
+
             this.tUser = new TField();
             this.tUser.x = n5;
             this.tUser.y = n10 + n7;
             this.tUser.width = n4;
             this.tUser.height = n6;
             this.tUser.setIputType(0);
-            this.tUser.title = "Email";
+            this.tUser.title = "Tài khoản / Email";
+
             n10 = this.tUser.y + n6 + n8;
             this.tPass = new TField();
             this.tPass.x = n5;
@@ -102,62 +105,163 @@ extends CScreen {
             this.tPass.height = n6;
             this.tPass.setIputType(2);
             this.tPass.title = Language.pass();
-            this.center = new Command(Language.signIn(), new IAction(){
 
+            this.center = new Command(Language.signIn(), new IAction() {
                 public void perform() {
                     CloudLoginScr.this.doLogin();
                 }
             });
-            this.focus = 0;
-            this.focusUpdate();
-            this.left = new Command(Language.back(), new IAction(){
-
+            this.left = new Command("Menu", new IAction() {
                 public void perform() {
-                    CloudLoginScr.this.lastScr.show();
+                    CloudLoginScr.this.openNotLoggedInMenu();
                 }
             });
+            this.right = new Command(Language.back(), new IAction() {
+                public void perform() {
+                    if (CloudLoginScr.this.lastScr != null) {
+                        CloudLoginScr.this.lastScr.show();
+                    } else if (CCanvas.mainMenuScr != null) {
+                        CCanvas.mainMenuScr.show();
+                    }
+                }
+            });
+            this.focus = 0;
+            this.focusUpdate();
         }
     }
 
     private void focusUpdate() {
-        this.tUser.setisFocus(this.focus == 0);
-        this.tPass.setisFocus(this.focus == 1);
-        this.right = this.focus == 0 ? this.tUser.cmdClear : this.tPass.cmdClear;
+        if (this.tUser != null && this.tPass != null) {
+            this.tUser.setisFocus(this.focus == 0);
+            this.tPass.setisFocus(this.focus == 1);
+        }
     }
 
     private void doLogin() {
-        if (this.tUser.getText().length() == 0 || this.tPass.getText().length() == 0) {
-            CCanvas.startOKDlg("Vui l\u00f2ng nh\u1eadp \u0111\u1ee7 email v\u00e0 m\u1eadt kh\u1ea9u.");
+        if (this.tUser == null || this.tPass == null || this.tUser.getText().trim().length() == 0 || this.tPass.getText().trim().length() == 0) {
+            CCanvas.startOKDlg("Vui lòng nhập đầy đủ tên tài khoản và mật khẩu.");
             return;
         }
-        String string = this.tUser.getText();
-        String string2 = this.tPass.getText();
-        CCanvas.startWaitDlg(Language.pleaseWait());
-        CloudSaveApi.login(string, string2, new IAction2(){
-
+        final String u = this.tUser.getText().trim();
+        final String p = this.tPass.getText().trim();
+        CCanvas.startWaitDlg("Đang kết nối máy chủ...");
+        CloudSaveApi.login(u, p, new IAction2() {
             public void perform(Object object) {
-                CCanvas.endDlg();
-                CloudSaveApi.Result result = (CloudSaveApi.Result)object;
+                CloudSaveApi.Result result = (CloudSaveApi.Result) object;
                 if (!result.ok) {
+                    CCanvas.endDlg();
                     CCanvas.startOKDlg(result.error);
                     return;
                 }
-                OfflineMission.onCloudAccountLinked();
-                CloudLoginScr.this.refreshState();
+
+                CCanvas.startWaitDlg("Đang đồng bộ dữ liệu từ Server...");
+                CloudSaveApi.downloadCurrentSave(new IAction2() {
+                    public void perform(Object objSave) {
+                        CCanvas.endDlg();
+                        CloudSaveApi.fetchRemoteConfig(null);
+                        CCanvas.startOKDlg("Đăng nhập thành công! Đã đồng bộ dữ liệu từ Server.", new IAction() {
+                            public void perform() {
+                                CloudLoginScr.this.enterGame();
+                            }
+                        });
+                    }
+                });
             }
         });
     }
 
+    private void doRegister() {
+        if (this.tUser == null || this.tPass == null || this.tUser.getText().trim().length() == 0 || this.tPass.getText().trim().length() == 0) {
+            CCanvas.startOKDlg("Vui lòng nhập tên tài khoản và mật khẩu muốn đăng ký.");
+            return;
+        }
+        final String u = this.tUser.getText().trim();
+        final String p = this.tPass.getText().trim();
+        CCanvas.startWaitDlg("Đang đăng ký tài khoản mới...");
+        CloudSaveApi.register(u, p, new IAction2() {
+            public void perform(Object object) {
+                CCanvas.endDlg();
+                CloudSaveApi.Result result = (CloudSaveApi.Result) object;
+                if (!result.ok) {
+                    CCanvas.startOKDlg(result.error);
+                    return;
+                }
+
+                GameMidlet.startNewOfflineGame(u);
+                if (TerrainMidlet.myInfo != null) {
+                    TerrainMidlet.myInfo.name = u;
+                }
+                OfflineSave.save();
+                CloudSaveApi.uploadCurrentSave(null);
+                CloudSaveApi.fetchRemoteConfig(null);
+
+                CCanvas.startOKDlg("Đăng ký thành công tài khoản " + u + "!", new IAction() {
+                    public void perform() {
+                        CloudLoginScr.this.enterGame();
+                    }
+                });
+            }
+        });
+    }
+
+    private void doConfigureServerUrl() {
+        CCanvas.inputDlg.setInfo("Nhập địa chỉ máy chủ (Server URL):", new IAction() {
+            public void perform() {
+                String input = CCanvas.inputDlg.tfInput.getText();
+                CCanvas.endDlg();
+                if (input != null && input.trim().length() > 0) {
+                    CloudSaveApi.setServerUrl(input.trim());
+                    CCanvas.startOKDlg("Đã cập nhật máy chủ:\n" + CloudSaveApi.getServerUrl());
+                }
+            }
+        }, null, 0);
+        CCanvas.inputDlg.tfInput.setMaxTextLenght(120);
+        CCanvas.inputDlg.tfInput.setText(CloudSaveApi.getServerUrl());
+        CCanvas.inputDlg.show();
+        if (CCanvas.isTouch) {
+            CCanvas.inputDlg.tfInput.doChangeToTextBox();
+        }
+    }
+
+    private void doManualSave() {
+        CCanvas.startWaitDlg("Đang lưu RMS và đồng bộ lên Server...");
+        CloudSaveApi.manualSaveAndSync(new IAction2() {
+            public void perform(Object obj) {
+                CCanvas.endDlg();
+                CloudSaveApi.Result res = (CloudSaveApi.Result) obj;
+                if (res != null) {
+                    CCanvas.startOKDlg(res.error);
+                }
+            }
+        });
+    }
+
+    private void enterGame() {
+        if (!OfflineSave.hasSave()) {
+            String name = CloudSaveApi.getLinkedEmail();
+            if (name == null || name.length() == 0) name = "Chiến Binh";
+            GameMidlet.startNewOfflineGame(name);
+        }
+        if (!GameMidlet.continueOfflineGame()) {
+            GameMidlet.startNewOfflineGame("Chiến Binh");
+        }
+        if (CloudSaveApi.isLoggedIn() && TerrainMidlet.myInfo != null) {
+            String name = CloudSaveApi.getLinkedEmail();
+            if (name != null && name.trim().length() > 0) {
+                TerrainMidlet.myInfo.name = name.trim();
+            }
+        }
+        GameMidlet.enterOfflineMenu();
+    }
+
     private void loadSaves() {
         this.savesLoading = true;
-        CloudSaveApi.listSaves(new IAction2(){
-
+        CloudSaveApi.listSaves(new IAction2() {
             public void perform(Object object) {
-                CloudSaveApi.Result result = (CloudSaveApi.Result)object;
+                CloudSaveApi.Result result = (CloudSaveApi.Result) object;
                 CloudLoginScr.this.savesLoading = false;
                 if (!result.ok) {
                     CloudLoginScr.this.saves = new Vector();
-                    CCanvas.startOKDlg("Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c danh s\u00e1ch save: " + result.error);
                     return;
                 }
                 CloudLoginScr.this.saves = result.entries;
@@ -172,133 +276,95 @@ extends CScreen {
         });
     }
 
-    private void openOptionsMenu() {
+    private void openNotLoggedInMenu() {
+        Vector<Command> v = new Vector<Command>();
+        v.addElement(new Command("Đăng Nhập", new IAction() {
+            public void perform() {
+                CloudLoginScr.this.doLogin();
+            }
+        }));
+        v.addElement(new Command("Đăng Ký Tài Khoản Mới", new IAction() {
+            public void perform() {
+                CloudLoginScr.this.doRegister();
+            }
+        }));
+        v.addElement(new Command("Cài Đặt Máy Chủ (Server URL)", new IAction() {
+            public void perform() {
+                CloudLoginScr.this.doConfigureServerUrl();
+            }
+        }));
+        CCanvas.menu.startAt(v, 0);
+    }
+
+    private void openLoggedInMenu() {
         Vector<Command> vector = new Vector<Command>();
-        vector.addElement(new Command("T\u1ea1o save m\u1edbi", new IAction(){
-
+        vector.addElement(new Command("Lưu Lại (Gửi Lên Server)", new IAction() {
             public void perform() {
-                CloudLoginScr.this.doUploadNew();
+                CloudLoginScr.this.doManualSave();
             }
         }));
-        vector.addElement(new Command("T\u1ea3i xu\u1ed1ng save \u0111\u00e3 ch\u1ecdn", new IAction(){
-
+        vector.addElement(new Command("Tải Lại Từ Server", new IAction() {
             public void perform() {
-                CloudLoginScr.this.doDownloadSelected();
+                CCanvas.startWaitDlg("Đang tải dữ liệu từ máy chủ...");
+                CloudSaveApi.downloadCurrentSave(new IAction2() {
+                    public void perform(Object obj) {
+                        CCanvas.endDlg();
+                        CloudSaveApi.Result res = (CloudSaveApi.Result) obj;
+                        if (res != null && res.ok) {
+                            CCanvas.startOKDlg("Đã tải và nạp thành công dữ liệu từ Server!");
+                        } else {
+                            CCanvas.startOKDlg("Không thể tải save: " + (res != null ? res.error : ""));
+                        }
+                    }
+                });
             }
         }));
-        vector.addElement(new Command("X\u00f3a save \u0111\u00e3 ch\u1ecdn", new IAction(){
-
+        vector.addElement(new Command("Đồng Bộ Nhiệm Vụ Mới", new IAction() {
             public void perform() {
-                CloudLoginScr.this.doDeleteSelected();
+                CCanvas.startWaitDlg("Đang tải cấu hình nhiệm vụ...");
+                CloudSaveApi.fetchRemoteConfig(new IAction2() {
+                    public void perform(Object obj) {
+                        CCanvas.endDlg();
+                        CloudSaveApi.Result res = (CloudSaveApi.Result) obj;
+                        if (res != null && res.ok) {
+                            CCanvas.startOKDlg("Đã cập nhật nhiệm vụ và phần thưởng mới từ Admin!");
+                        } else {
+                            CCanvas.startOKDlg("Không thể kết nối máy chủ để lấy nhiệm vụ.");
+                        }
+                    }
+                });
             }
         }));
-        vector.addElement(new Command("\u0110\u0103ng xu\u1ea5t", new IAction(){
-
+        vector.addElement(new Command("Cài Đặt Máy Chủ (Server URL)", new IAction() {
+            public void perform() {
+                CloudLoginScr.this.doConfigureServerUrl();
+            }
+        }));
+        vector.addElement(new Command("Đăng Xuất", new IAction() {
             public void perform() {
                 CloudSaveApi.logout();
                 CloudLoginScr.this.refreshState();
-                CCanvas.startOKDlg("\u0110\u00e3 \u0111\u0103ng xu\u1ea5t kh\u1ecfi Cloud Save.");
+                CCanvas.startOKDlg("Đã đăng xuất khỏi tài khoản.");
             }
         }));
         CCanvas.menu.startAt(vector, 0);
     }
 
-    private void doUploadNew() {
-        CCanvas.startWaitDlg(Language.pleaseWait());
-        String string = TerrainMidlet.myInfo != null ? TerrainMidlet.myInfo.name : "";
-        CloudSaveApi.uploadSave(string, OfflineSave.exportBytes(), new IAction2(){
-
-            public void perform(Object object) {
-                CCanvas.endDlg();
-                CloudSaveApi.Result result = (CloudSaveApi.Result)object;
-                if (!result.ok) {
-                    CCanvas.startOKDlg("T\u1ea3i l\u00ean th\u1ea5t b\u1ea1i: " + result.error);
-                    return;
-                }
-                CCanvas.startOKDlg("\u0110\u00e3 t\u1ea1o save m\u1edbi tr\u00ean Cloud.");
-                CloudLoginScr.this.loadSaves();
-            }
-        });
-    }
-
-    private void doDownloadSelected() {
-        final CloudSaveApi.CloudSaveEntry cloudSaveEntry = this.getSelectedEntry();
-        if (cloudSaveEntry == null) {
-            CCanvas.startOKDlg("Ch\u01b0a ch\u1ecdn save n\u00e0o.");
-            return;
-        }
-        CCanvas.startYesNoDlg("T\u1ea3i save \"" + CloudLoginScr.displayName(cloudSaveEntry) + "\" s\u1ebd ghi \u0111\u00e8 save hi\u1ec7n t\u1ea1i tr\u00ean m\u00e1y. Ti\u1ebfp t\u1ee5c?", new IAction(){
-
-            public void perform() {
-                CCanvas.startWaitDlg(Language.pleaseWait());
-                CloudSaveApi.downloadSave(cloudSaveEntry.id, new IAction2(){
-
-                    public void perform(Object object) {
-                        CCanvas.endDlg();
-                        CloudSaveApi.Result result = (CloudSaveApi.Result)object;
-                        if (!result.ok) {
-                            CCanvas.startOKDlg("T\u1ea3i save th\u1ea5t b\u1ea1i: " + result.error);
-                            return;
-                        }
-                        boolean bl = OfflineSave.importBytes(result.data);
-                        CCanvas.startOKDlg(bl ? "\u0110\u00e3 kh\u00f4i ph\u1ee5c save t\u1eeb Cloud." : "T\u1ea3i v\u1ec1 th\u00e0nh c\u00f4ng nh\u01b0ng kh\u00f4ng \u00e1p d\u1ee5ng \u0111\u01b0\u1ee3c save.");
-                    }
-                });
-            }
-        });
-    }
-
-    private void doDeleteSelected() {
-        final CloudSaveApi.CloudSaveEntry cloudSaveEntry = this.getSelectedEntry();
-        if (cloudSaveEntry == null) {
-            CCanvas.startOKDlg("Ch\u01b0a ch\u1ecdn save n\u00e0o.");
-            return;
-        }
-        CCanvas.startYesNoDlg("X\u00f3a save \"" + CloudLoginScr.displayName(cloudSaveEntry) + "\" kh\u1ecfi Cloud? Kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.", new IAction(){
-
-            public void perform() {
-                CCanvas.startWaitDlg(Language.pleaseWait());
-                CloudSaveApi.deleteSave(cloudSaveEntry.id, new IAction2(){
-
-                    public void perform(Object object) {
-                        CCanvas.endDlg();
-                        CloudSaveApi.Result result = (CloudSaveApi.Result)object;
-                        if (!result.ok) {
-                            CCanvas.startOKDlg("X\u00f3a th\u1ea5t b\u1ea1i: " + result.error);
-                            return;
-                        }
-                        CCanvas.startOKDlg("\u0110\u00e3 x\u00f3a save.");
-                        CloudLoginScr.this.loadSaves();
-                    }
-                });
-            }
-        });
-    }
-
-    private CloudSaveApi.CloudSaveEntry getSelectedEntry() {
-        if (this.saves == null || this.selectedSave < 0 || this.selectedSave >= this.saves.size()) {
-            return null;
-        }
-        return (CloudSaveApi.CloudSaveEntry)this.saves.elementAt(this.selectedSave);
-    }
-
-    private static String displayName(CloudSaveApi.CloudSaveEntry cloudSaveEntry) {
-        return cloudSaveEntry.name != null && cloudSaveEntry.name.length() > 0 ? cloudSaveEntry.name : "(Kh\u00f4ng t\u00ean)";
-    }
-
-    private static String formatDate(String string) {
-        if (string == null || string.length() < 16) {
-            return "";
-        }
-        String string2 = string.substring(0, 4);
-        String string3 = string.substring(5, 7);
-        String string4 = string.substring(8, 10);
-        String string5 = string.substring(11, 13);
-        String string6 = string.substring(14, 16);
-        return string4 + "/" + string3 + "/" + string2 + " " + string5 + ":" + string6;
-    }
-
     public void update() {
+        if (!this.linked && this.tUser != null && this.tPass != null) {
+            this.tUser.update();
+            this.tPass.update();
+            if (CCanvas.keyPressed[2]) {
+                this.focus = 0;
+                this.focusUpdate();
+                CScreen.clearKey();
+            }
+            if (CCanvas.keyPressed[8]) {
+                this.focus = 1;
+                this.focusUpdate();
+                CScreen.clearKey();
+            }
+        }
         if (this.linked && this.saves != null && this.saves.size() > 0) {
             int n = this.saves.size();
             if (CCanvas.keyPressed[2]) {
@@ -313,30 +379,48 @@ extends CScreen {
         super.update();
     }
 
+    public void keyPressed(int n) {
+        if (!this.linked) {
+            if (n == 10 || n == 13) {
+                if (this.focus == 0) {
+                    this.focus = 1;
+                    this.focusUpdate();
+                } else {
+                    this.doLogin();
+                }
+                return;
+            }
+            if (n == -1 || n == -38 || n == 2) {
+                this.focus = 0;
+                this.focusUpdate();
+                return;
+            }
+            if (n == -2 || n == -39 || n == 8) {
+                this.focus = 1;
+                this.focusUpdate();
+                return;
+            }
+            if (this.focus == 0 && this.tUser != null) {
+                this.tUser.keyPressed(n);
+                return;
+            } else if (this.focus == 1 && this.tPass != null) {
+                this.tPass.keyPressed(n);
+                return;
+            }
+        }
+        super.keyPressed(n);
+    }
+
     public void onPointerPressed(int n, int n2, int n3) {
         super.onPointerPressed(n, n2, n3);
-        if (this.linked) {
-            int n4;
-            int n5;
-            if (this.saves != null && this.saves.size() > 0 && (n5 = (n2 - (n4 = this.boxTop + 30 + 16)) / 16) >= 0 && n5 < this.saves.size()) {
-                this.selectedSave = n5;
-            }
-            return;
-        }
-        if (CCanvas.isPointer(this.tUser.x, this.tUser.y, this.tUser.width, this.tUser.height, n3)) {
-            if (this.focus != 0) {
+        if (!this.linked && this.tUser != null && this.tPass != null) {
+            if (CCanvas.isPointer(this.tUser.x, this.tUser.y - 10, this.tUser.width, this.tUser.height + 20, n3)) {
                 this.focus = 0;
-            } else {
-                this.tUser.doChangeToTextBox();
-            }
-            this.focusUpdate();
-        } else if (CCanvas.isPointer(this.tPass.x, this.tPass.y, this.tPass.width, this.tPass.height, n3)) {
-            if (this.focus != 1) {
+                this.focusUpdate();
+            } else if (CCanvas.isPointer(this.tPass.x, this.tPass.y - 10, this.tPass.width, this.tPass.height + 20, n3)) {
                 this.focus = 1;
-            } else {
-                this.tPass.doChangeToTextBox();
+                this.focusUpdate();
             }
-            this.focusUpdate();
         }
     }
 
@@ -344,34 +428,26 @@ extends CScreen {
         mGraphics2.setColor(7852799);
         mGraphics2.fillRect(0, 0, CCanvas.width, CCanvas.hieght, false);
         Cloud.paintCloud(mGraphics2);
-        CloudLoginScr.paintBorderRect(mGraphics2, this.boxTop, this.nTab, this.boxH, "CLOUD SAVE");
+        CloudLoginScr.paintBorderRect(mGraphics2, this.boxTop, this.nTab, this.boxH, "Máy chủ Cloud");
+
         if (this.linked) {
             int n = this.boxTop + 30;
-            String string = CloudSaveApi.getLinkedEmail();
+            String string = "Tài khoản: " + CloudSaveApi.getLinkedEmail();
             int n2 = Font.normalYFont.getWidth(string);
             mGraphics2.setColor(3374591);
             mGraphics2.fillRect(CCanvas.width / 2 - n2 / 2 - 6, n - 1, n2 + 12, 16, false);
             Font.normalYFont.drawString(mGraphics2, string, CCanvas.width / 2, n, 2);
-            n += 16;
-            if (this.savesLoading) {
-                Font.borderFont.drawString(mGraphics2, "\u0110ang t\u1ea3i danh s\u00e1ch...", CCanvas.width / 2, n, 2);
-            } else if (this.saves == null || this.saves.size() == 0) {
-                Font.borderFont.drawString(mGraphics2, "Ch\u01b0a c\u00f3 save n\u00e0o tr\u00ean Cloud.", CCanvas.width / 2, n, 2);
-            } else {
-                for (int i = 0; i < this.saves.size(); ++i) {
-                    CloudSaveApi.CloudSaveEntry cloudSaveEntry = (CloudSaveApi.CloudSaveEntry)this.saves.elementAt(i);
-                    if (i == this.selectedSave) {
-                        mGraphics2.setColor(3374591);
-                        mGraphics2.fillRect(CCanvas.width / 2 - this.boxW / 2 + 10, n - 1, this.boxW - 20, 16, false);
-                        mGraphics2.setColor(0);
-                    }
-                    String string2 = i + 1 + ". " + CloudLoginScr.displayName(cloudSaveEntry) + " - " + CloudLoginScr.formatDate(cloudSaveEntry.createdAt);
-                    Font.borderFont.drawString(mGraphics2, string2, CCanvas.width / 2, n, 2);
-                    n += 16;
-                }
-            }
+            n += 20;
+
+            String serverInfo = "Server: " + CloudSaveApi.getServerUrl();
+            Font.borderFont.drawString(mGraphics2, serverInfo, CCanvas.width / 2, n, 2);
+            n += 18;
+
+            Font.borderFont.drawString(mGraphics2, "Dữ liệu được tự động đồng bộ khi lưu.", CCanvas.width / 2, n, 2);
+            n += 18;
+            Font.borderFont.drawString(mGraphics2, "Bấm 'LƯU LẠI' để gửi dữ liệu lên Server ngay.", CCanvas.width / 2, n, 2);
         } else {
-            Font.borderFont.drawString(mGraphics2, "Email:", this.tUser.x, this.tUser.y - 14, 0);
+            Font.borderFont.drawString(mGraphics2, "Tài khoản:", this.tUser.x, this.tUser.y - 14, 0);
             this.tUser.paint(mGraphics2);
             Font.borderFont.drawString(mGraphics2, Language.pass() + ":", this.tPass.x, this.tPass.y - 14, 0);
             this.tPass.paint(mGraphics2);
@@ -379,4 +455,3 @@ extends CScreen {
         super.paint(mGraphics2);
     }
 }
-

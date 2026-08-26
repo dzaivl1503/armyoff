@@ -1,11 +1,8 @@
 /*
- * Decompiled with CFR 0.152.
+ * Mobi Army 2 Offline Mission System with All 12 Gun Missions and Remote Config
  */
 package com.teamobi.mobiarmy2;
 
-import com.teamobi.mobiarmy2.OfflineCombat;
-import com.teamobi.mobiarmy2.OfflineSave;
-import com.teamobi.mobiarmy2.OfflineSpecialShop;
 import coreLG.CCanvas;
 import coreLG.TerrainMidlet;
 import java.util.Calendar;
@@ -15,21 +12,330 @@ import model.Mission;
 import model.PlayerInfo;
 import player.CPlayer;
 import player.PM;
+import screen.PrepareScr;
 
 public final class OfflineMission {
-    public static final int MISSION_TYPE_COUNT = 19;
+    public static final int MISSION_TYPE_COUNT = 28;
     static final int LEGACY_MISSION_TYPE_COUNT = 18;
     static final int LEGACY_CLAIMED_COUNT = 54;
-    public static final int MISSION_ID_CLOUD_LINK = 18;
-    private static final int[] ID = new int[]{0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 16, 17, 17, 17, 18};
-    private static final int[] LEVEL = new int[]{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1};
-    private static final String[] NAME = new String[]{"Lv 1: Th\u1eafng 100 v\u00e1n solo", "Lv 2: Th\u1eafng 1000 v\u00e1n solo", "Lv 3: Th\u1eafng 10000 v\u00e1n solo", "Lv 1: B\u1eafn 100.000 \u0111i\u1ec3m HP", "Lv 2: B\u1eafn 1.000.000 \u0111i\u1ec3m HP", "Lv 3: B\u1eafn 1.000.000.000 \u0111i\u1ec3m HP", "Lv 1: Th\u1eafng 50 v\u00e1n \u0111\u1ea5u UFO", "Lv 2: Th\u1eafng 100 v\u00e1n \u0111\u1ea5u UFO", "Lv 3: Th\u1eafng 200 v\u00e1n \u0111\u1ea5u UFO", "Lv 1: Th\u1eafng 50 v\u00e1n \u0111\u1ea5u Kh\u00ed C\u1ea7u", "Lv 2: Th\u1eafng 100 v\u00e1n \u0111\u1ea5u Kh\u00ed C\u1ea7u", "Lv 3: Th\u1eafng 200 v\u00e1n \u0111\u1ea5u Kh\u00ed C\u1ea7u", "Lv 1: Th\u1eafng 50 v\u00e1n \u0111\u1ea5u Ma", "Lv 2: Th\u1eafng 100 v\u00e1n \u0111\u1ea5u Ma", "Lv 3: Th\u1eafng 200 v\u00e1n \u0111\u1ea5u Ma", "Lv 1: N\u00e9m 200 qu\u1ea3 B52", "Lv 2: N\u00e9m 2000 qu\u1ea3 B52", "Lv 3: N\u00e9m 20000 qu\u1ea3 B52", "Lv 1: Ti\u00eau di\u1ec7t 200 Tarzan", "Lv 2: Ti\u00eau di\u1ec7t 2000 Tarzan", "Lv 3: Ti\u00eau di\u1ec7t 20000 Tarzan", "Lv 1: Ti\u00eau di\u1ec7t 200 Chicky", "Lv 2: Ti\u00eau di\u1ec7t 2000 Chicky", "Lv 3: Ti\u00eau di\u1ec7t 20000 Chicky", "Lv 1: Ti\u00eau di\u1ec7t 200 Magenta", "Lv 2: Ti\u00eau di\u1ec7t 2000 Magenta", "Lv 3: Ti\u00eau di\u1ec7t 20000 Magenta", "Lv 1: T\u1ea1o 1 vi\u00ean ng\u1ecdc c\u1ea5p 8", "Lv 2: T\u1ea1o 5 vi\u00ean ng\u1ecdc c\u1ea5p 8", "Lv 3: T\u1ea1o 10 vi\u00ean ng\u1ecdc c\u1ea5p 8", "Lv 1: T\u1ea1o 1 vi\u00ean ng\u1ecdc c\u1ea5p 9", "Lv 2: T\u1ea1o 5 vi\u00ean ng\u1ecdc c\u1ea5p 9", "Lv 3: T\u1ea1o 10 vi\u00ean ng\u1ecdc c\u1ea5p 9", "Lv 1: T\u1ea1o 1 vi\u00ean ng\u1ecdc c\u1ea5p 10", "Lv 2: T\u1ea1o 5 vi\u00ean ng\u1ecdc c\u1ea5p 10", "Lv 3: T\u1ea1o 10 vi\u00ean ng\u1ecdc c\u1ea5p 10", "Lv 1: B\u1eafn 100 ph\u00e1t si\u00eau cao, si\u00eau xa", "Lv 2: B\u1eafn 1.000 ph\u00e1t si\u00eau cao, si\u00eau xa", "Lv 3: B\u1eafn 10.000 ph\u00e1t si\u00eau cao, si\u00eau xa", "Lv 1: D\u00f9ng Gunner th\u1eafng 200 v\u00e1n", "Lv 2: D\u00f9ng Gunner th\u1eafng 2.000 v\u00e1n", "Lv 3: D\u00f9ng Gunner th\u1eafng 20.000 v\u00e1n", "Lv 1: D\u00f9ng Miss 6 th\u1eafng 200 v\u00e1n", "Lv 2: D\u00f9ng Miss 6 th\u1eafng 2.000 v\u00e1n", "Lv 3: D\u00f9ng Miss 6 th\u1eafng 20.000 v\u00e1n", "Lv 1: D\u00f9ng Proton th\u1eafng 200 v\u00e1n", "Lv 2: D\u00f9ng Proton th\u1eafng 2.000 v\u00e1n", "Lv 3: D\u00f9ng Proton th\u1eafng 20.000 v\u00e1n", "Lv 1: \u0110\u0103ng nh\u1eadp 30 ng\u00e0y", "Lv 2: \u0110\u0103ng nh\u1eadp 90 ng\u00e0y", "Lv 3: \u0110\u0103ng nh\u1eadp 270 ng\u00e0y", "Lv 1: Th\u1eafng 500 v\u00e1n \u0111\u1ea5u tr\u00ean 5 ng\u01b0\u1eddi ch\u01a1i", "Lv 2: Th\u1eafng 1000 v\u00e1n \u0111\u1ea5u tr\u00ean 5 ng\u01b0\u1eddi ch\u01a1i", "Lv 3: Th\u1eafng 2000 v\u00e1n \u0111\u1ea5u tr\u00ean 5 ng\u01b0\u1eddi ch\u01a1i", "Li\u00ean k\u1ebft t\u00e0i kho\u1ea3n"};
-    private static final String[] REWARD = new String[]{"+1k xp, +100 danh d\u1ef1", "+10k xp, +1k danh d\u1ef1", "+100k xp, +10k danh d\u1ef1", "+5k xp, +500 danh d\u1ef1", "+50k xp, +2k danh d\u1ef1", "+500k xp, +8k danh d\u1ef1", "+2k xp, +500 danh d\u1ef1", "+20k xp, +2k danh d\u1ef1", "+200k xp, +8k danh d\u1ef1", "+2k xp, +500 danh d\u1ef1", "+20k xp, +2k danh d\u1ef1", "+200k xp, +8k danh d\u1ef1", "+2k xp, +500 danh d\u1ef1", "+20k xp, +2k danh d\u1ef1", "+200k xp, +8k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+1k xp, +100 danh d\u1ef1", "+10k xp, +500 danh d\u1ef1", "+100k xp, +1k danh d\u1ef1", "+5k xp, +500 danh d\u1ef1", "+50k xp, +5k danh d\u1ef1", "+500k xp, +50k danh d\u1ef1", "+50k xp, +5k danh d\u1ef1", "+500k xp, +50k danh d\u1ef1", "+5Tr xp, +500k danh d\u1ef1", "+5k xp, +100 danh d\u1ef1", "+25k xp, +1k danh d\u1ef1", "+125k xp, +10k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+2k xp, +200 danh d\u1ef1", "+20k xp, +1k danh d\u1ef1", "+200k xp, +5k danh d\u1ef1", "+10k xp, +500 danh d\u1ef1", "+30k xp, +1,5k danh d\u1ef1", "+90k xp, +4,5k danh d\u1ef1", "+5k xp, +500 danh d\u1ef1", "+10k xp, +1k danh d\u1ef1", "+20k xp, +2k danh d\u1ef1", "+1000 xu, +100 l\u01b0\u1ee3ng, +1000 exp, 1 Ng\u1ecdc c\u1ea5p 10 ng\u1eabu nhi\u00ean"};
-    private static final int[] REQUIRE = new int[]{100, 1000, 10000, 100000, 1000000, 1000000000, 50, 100, 200, 50, 100, 200, 50, 100, 200, 200, 2000, 20000, 200, 2000, 20000, 200, 2000, 20000, 200, 2000, 20000, 1, 5, 10, 1, 5, 10, 1, 5, 10, 100, 1000, 10000, 200, 2000, 20000, 200, 2000, 20000, 200, 2000, 20000, 30, 90, 270, 500, 1000, 2000, 1};
-    private static final int[] EXP = new int[]{1000, 10000, 100000, 5000, 50000, 500000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 1000, 10000, 100000, 5000, 50000, 500000, 50000, 500000, 5000000, 5000, 25000, 125000, 2000, 20000, 200000, 2000, 20000, 200000, 2000, 20000, 200000, 10000, 30000, 90000, 5000, 10000, 20000, 1000};
-    private static final int[] CUP = new int[]{100, 1000, 10000, 500, 2000, 8000, 500, 2000, 8000, 500, 2000, 8000, 500, 2000, 8000, 200, 1000, 5000, 200, 1000, 5000, 200, 1000, 5000, 200, 1000, 5000, 100, 500, 1000, 500, 5000, 50000, 5000, 50000, 500000, 100, 1000, 10000, 200, 1000, 5000, 200, 1000, 5000, 200, 1000, 5000, 500, 1500, 4500, 500, 1000, 2000, 0};
-    public static int[] progress = new int[19];
-    public static boolean[] claimed = new boolean[55];
+    public static final int MISSION_ID_CLOUD_LINK = 27;
+
+    // Gun missions start at ID 13 and go up to 24 (Gun 0 to Gun 11)
+    public static final int GUN_MISSION_START_ID = 13;
+    public static final int GUN_MISSION_COUNT = 12;
+
+    public static int[] ID = new int[]{
+        0, 0, 0,
+        1, 1, 1,
+        2, 2, 2,
+        3, 3, 3,
+        4, 4, 4,
+        5, 5, 5,
+        6, 6, 6,
+        7, 7, 7,
+        8, 8, 8,
+        9, 9, 9,
+        10, 10, 10,
+        11, 11, 11,
+        12, 12, 12,
+        // Gun 0: Gunner
+        13, 13, 13,
+        // Gun 1: Miss 6
+        14, 14, 14,
+        // Gun 2: Electician
+        15, 15, 15,
+        // Gun 3: King Kong
+        16, 16, 16,
+        // Gun 4: Rocketer
+        17, 17, 17,
+        // Gun 5: Granos
+        18, 18, 18,
+        // Gun 6: Chicky
+        19, 19, 19,
+        // Gun 7: Tarzan
+        20, 20, 20,
+        // Gun 8: Apache
+        21, 21, 21,
+        // Gun 9: Magenta
+        22, 22, 22,
+        // Gun 10: Draby
+        23, 23, 23,
+        // Gun 11: Cow Girl
+        24, 24, 24,
+        // Login streak
+        25, 25, 25,
+        // 5+ players win
+        26, 26, 26,
+        // Cloud link
+        27
+    };
+
+    public static int[] LEVEL = new int[]{
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        // Gun 0..11
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        1, 2, 3,
+        // Login & multi & cloud
+        1, 2, 3,
+        1, 2, 3,
+        1
+    };
+
+    public static String[] NAME = new String[]{
+        "Lv 1: Thắng 100 ván solo", "Lv 2: Thắng 1000 ván solo", "Lv 3: Thắng 10000 ván solo",
+        "Lv 1: Bắn 100.000 điểm HP", "Lv 2: Bắn 1.000.000 điểm HP", "Lv 3: Bắn 1.000.000.000 điểm HP",
+        "Lv 1: Thắng 50 ván đấu UFO", "Lv 2: Thắng 100 ván đấu UFO", "Lv 3: Thắng 200 ván đấu UFO",
+        "Lv 1: Thắng 50 ván đấu Khí Cầu", "Lv 2: Thắng 100 ván đấu Khí Cầu", "Lv 3: Thắng 200 ván đấu Khí Cầu",
+        "Lv 1: Thắng 50 ván đấu Ma", "Lv 2: Thắng 100 ván đấu Ma", "Lv 3: Thắng 200 ván đấu Ma",
+        "Lv 1: Ném 200 quả B52", "Lv 2: Ném 2000 quả B52", "Lv 3: Ném 20000 quả B52",
+        "Lv 1: Tiêu diệt 200 Tarzan", "Lv 2: Tiêu diệt 2000 Tarzan", "Lv 3: Tiêu diệt 20000 Tarzan",
+        "Lv 1: Tiêu diệt 200 Chicky", "Lv 2: Tiêu diệt 2000 Chicky", "Lv 3: Tiêu diệt 20000 Chicky",
+        "Lv 1: Tiêu diệt 200 Magenta", "Lv 2: Tiêu diệt 2000 Magenta", "Lv 3: Tiêu diệt 20000 Magenta",
+        "Lv 1: Tạo 1 viên ngọc cấp 8", "Lv 2: Tạo 5 viên ngọc cấp 8", "Lv 3: Tạo 10 viên ngọc cấp 8",
+        "Lv 1: Tạo 1 viên ngọc cấp 9", "Lv 2: Tạo 5 viên ngọc cấp 9", "Lv 3: Tạo 10 viên ngọc cấp 9",
+        "Lv 1: Tạo 1 viên ngọc cấp 10", "Lv 2: Tạo 5 viên ngọc cấp 10", "Lv 3: Tạo 10 viên ngọc cấp 10",
+        "Lv 1: Bắn 100 phát siêu cao, siêu xa", "Lv 2: Bắn 1.000 phát siêu cao, siêu xa", "Lv 3: Bắn 10.000 phát siêu cao, siêu xa",
+        // Gun missions with 5, 50, 500 wins
+        "Lv 1: Dùng Gunner thắng 5 ván", "Lv 2: Dùng Gunner thắng 50 ván", "Lv 3: Dùng Gunner thắng 500 ván",
+        "Lv 1: Dùng Miss 6 thắng 5 ván", "Lv 2: Dùng Miss 6 thắng 50 ván", "Lv 3: Dùng Miss 6 thắng 500 ván",
+        "Lv 1: Dùng Electician thắng 5 ván", "Lv 2: Dùng Electician thắng 50 ván", "Lv 3: Dùng Electician thắng 500 ván",
+        "Lv 1: Dùng King Kong thắng 5 ván", "Lv 2: Dùng King Kong thắng 50 ván", "Lv 3: Dùng King Kong thắng 500 ván",
+        "Lv 1: Dùng Rocketer thắng 5 ván", "Lv 2: Dùng Rocketer thắng 50 ván", "Lv 3: Dùng Rocketer thắng 500 ván",
+        "Lv 1: Dùng Granos thắng 5 ván", "Lv 2: Dùng Granos thắng 50 ván", "Lv 3: Dùng Granos thắng 500 ván",
+        "Lv 1: Dùng Chicky thắng 5 ván", "Lv 2: Dùng Chicky thắng 50 ván", "Lv 3: Dùng Chicky thắng 500 ván",
+        "Lv 1: Dùng Tarzan thắng 5 ván", "Lv 2: Dùng Tarzan thắng 50 ván", "Lv 3: Dùng Tarzan thắng 500 ván",
+        "Lv 1: Dùng Apache thắng 5 ván", "Lv 2: Dùng Apache thắng 50 ván", "Lv 3: Dùng Apache thắng 500 ván",
+        "Lv 1: Dùng Magenta thắng 5 ván", "Lv 2: Dùng Magenta thắng 50 ván", "Lv 3: Dùng Magenta thắng 500 ván",
+        "Lv 1: Dùng Draby thắng 5 ván", "Lv 2: Dùng Draby thắng 50 ván", "Lv 3: Dùng Draby thắng 500 ván",
+        "Lv 1: Dùng Cow Girl thắng 5 ván", "Lv 2: Dùng Cow Girl thắng 50 ván", "Lv 3: Dùng Cow Girl thắng 500 ván",
+        // Login & multi & cloud
+        "Lv 1: Đăng nhập 30 ngày", "Lv 2: Đăng nhập 90 ngày", "Lv 3: Đăng nhập 270 ngày",
+        "Lv 1: Thắng 500 ván đấu trên 5 người chơi", "Lv 2: Thắng 1000 ván đấu trên 5 người chơi", "Lv 3: Thắng 2000 ván đấu trên 5 người chơi",
+        "Liên kết tài khoản Cloud"
+    };
+
+    public static String[] REWARD = new String[]{
+        "+1k xp, +100 danh dự", "+10k xp, +1k danh dự", "+100k xp, +10k danh dự",
+        "+5k xp, +500 danh dự", "+50k xp, +2k danh dự", "+500k xp, +8k danh dự",
+        "+2k xp, +500 danh dự", "+20k xp, +2k danh dự", "+200k xp, +8k danh dự",
+        "+2k xp, +500 danh dự", "+20k xp, +2k danh dự", "+200k xp, +8k danh dự",
+        "+2k xp, +500 danh dự", "+20k xp, +2k danh dự", "+200k xp, +8k danh dự",
+        "+2k xp, +200 danh dự", "+20k xp, +1k danh dự", "+200k xp, +5k danh dự",
+        "+2k xp, +200 danh dự", "+20k xp, +1k danh dự", "+200k xp, +5k danh dự",
+        "+2k xp, +200 danh dự", "+20k xp, +1k danh dự", "+200k xp, +5k danh dự",
+        "+2k xp, +200 danh dự", "+20k xp, +1k danh dự", "+200k xp, +5k danh dự",
+        "+1k xp, +100 danh dự", "+10k xp, +500 danh dự", "+100k xp, +1k danh dự",
+        "+5k xp, +500 danh dự", "+50k xp, +5k danh dự", "+500k xp, +50k danh dự",
+        "+50k xp, +5k danh dự", "+500k xp, +50k danh dự", "+5Tr xp, +500k danh dự",
+        "+5k xp, +100 danh dự", "+25k xp, +1k danh dự", "+125k xp, +10k danh dự",
+        // Gun rewards
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        "+5k xp, +10k xu, +50 lượng", "+50k xp, +50k xu, +200 lượng", "+500k xp, +500k xu, +1k lượng",
+        // Login & multi & cloud
+        "+10k xp, +500 danh dự", "+30k xp, +1,5k danh dự", "+90k xp, +4,5k danh dự",
+        "+5k xp, +500 danh dự", "+10k xp, +1k danh dự", "+20k xp, +2k danh dự",
+        "+1000 xu, +100 lượng, +1000 exp, 1 Ngọc cấp 10 ngẫu nhiên"
+    };
+
+    public static int[] REQUIRE = new int[]{
+        100, 1000, 10000,
+        100000, 1000000, 1000000000,
+        50, 100, 200,
+        50, 100, 200,
+        50, 100, 200,
+        200, 2000, 20000,
+        200, 2000, 20000,
+        200, 2000, 20000,
+        200, 2000, 20000,
+        1, 5, 10,
+        1, 5, 10,
+        1, 5, 10,
+        100, 1000, 10000,
+        // Gun 0..11: 5, 50, 500
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        5, 50, 500,
+        // Login & multi & cloud
+        30, 90, 270,
+        500, 1000, 2000,
+        1
+    };
+
+    public static int[] EXP = new int[]{
+        1000, 10000, 100000,
+        5000, 50000, 500000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        2000, 20000, 200000,
+        1000, 10000, 100000,
+        5000, 50000, 500000,
+        50000, 500000, 5000000,
+        5000, 25000, 125000,
+        // Gun 0..11
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        5000, 50000, 500000,
+        // Login & multi & cloud
+        10000, 30000, 90000,
+        5000, 10000, 20000,
+        1000
+    };
+
+    public static int[] CUP = new int[]{
+        100, 1000, 10000,
+        500, 2000, 8000,
+        500, 2000, 8000,
+        500, 2000, 8000,
+        500, 2000, 8000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        100, 500, 1000,
+        500, 5000, 50000,
+        5000, 50000, 500000,
+        100, 1000, 10000,
+        // Gun 0..11
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        200, 1000, 5000,
+        // Login & multi & cloud
+        500, 1500, 4500,
+        500, 1000, 2000,
+        0
+    };
+
+    public static int[] REWARD_XU = new int[]{
+        5000, 50000, 500000,
+        10000, 100000, 1000000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        20000, 200000, 1000000,
+        100000, 1000000, 10000000,
+        10000, 50000, 500000,
+        // Gun 0..11
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        10000, 50000, 500000,
+        // Login & multi & cloud
+        50000, 150000, 450000,
+        50000, 100000, 200000,
+        1000
+    };
+
+    public static int[] REWARD_LUONG = new int[]{
+        10, 50, 200,
+        20, 100, 500,
+        20, 50, 200,
+        20, 50, 200,
+        20, 50, 200,
+        10, 50, 200,
+        10, 50, 200,
+        10, 50, 200,
+        10, 50, 200,
+        10, 50, 200,
+        20, 100, 500,
+        100, 500, 2000,
+        10, 50, 200,
+        // Gun 0..11
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        50, 200, 1000,
+        // Login & multi & cloud
+        50, 150, 450,
+        50, 100, 200,
+        100
+    };
+
+    public static int[] progress = new int[64];
+    public static boolean[] claimed = new boolean[128];
     public static int loginStreak;
     public static int lastLoginYmd;
 
@@ -37,18 +343,18 @@ public final class OfflineMission {
     }
 
     public static void reset() {
-        progress = new int[19];
-        claimed = new boolean[55];
+        progress = new int[64];
+        claimed = new boolean[128];
         loginStreak = 0;
         lastLoginYmd = 0;
     }
 
     public static void onCloudAccountLinked() {
-        OfflineMission.addProgress(18, 1);
+        OfflineMission.addProgress(MISSION_ID_CLOUD_LINK, 1);
     }
 
     public static void addProgress(int n, int n2) {
-        if (n < 0 || n >= 19 || n2 <= 0) {
+        if (n < 0 || n >= progress.length || n2 <= 0) {
             return;
         }
         long l = (long)progress[n] + (long)n2;
@@ -57,34 +363,31 @@ public final class OfflineMission {
 
     public static void onLogin() {
         Calendar calendar = Calendar.getInstance();
-        int n = calendar.get(1) * 10000 + (calendar.get(2) + 1) * 100 + calendar.get(5);
+        int n = calendar.get(Calendar.YEAR) * 10000 + (calendar.get(Calendar.MONTH) + 1) * 100 + calendar.get(Calendar.DAY_OF_MONTH);
         if (n == lastLoginYmd) {
             return;
         }
         lastLoginYmd = n;
         ++loginStreak;
-        OfflineMission.addProgress(16, 1);
+        OfflineMission.addProgress(25, 1);
     }
 
-    public static void onBossWin(CPlayer cPlayer) {
-        CPlayer cPlayer2;
+    public static void onBossWin(CPlayer bossPlayer) {
         OfflineMission.addProgress(0, 1);
-        if (cPlayer != null) {
-            if (cPlayer.gun == 16) {
+        if (bossPlayer != null) {
+            if (bossPlayer.gun == 16) {
                 OfflineMission.addProgress(2, 1);
-            } else if (cPlayer.gun == 17) {
+            } else if (bossPlayer.gun == 17) {
                 OfflineMission.addProgress(3, 1);
-            } else if (cPlayer.gun == 25 || cPlayer.gun == 26) {
+            } else if (bossPlayer.gun == 25 || bossPlayer.gun == 26) {
                 OfflineMission.addProgress(4, 1);
             }
         }
-        if ((cPlayer2 = PM.getMyPlayer()) != null) {
-            if (cPlayer2.gun == 0) {
-                OfflineMission.addProgress(13, 1);
-            } else if (cPlayer2.gun == 1) {
-                OfflineMission.addProgress(14, 1);
-            } else if (cPlayer2.gun == 2) {
-                OfflineMission.addProgress(15, 1);
+        PlayerInfo playerInfo = TerrainMidlet.myInfo;
+        if (playerInfo != null) {
+            int g = playerInfo.gun;
+            if (g >= 0 && g < GUN_MISSION_COUNT) {
+                OfflineMission.addProgress(GUN_MISSION_START_ID + g, 1);
             }
         }
     }
@@ -123,20 +426,17 @@ public final class OfflineMission {
         }
     }
 
-    public static void onPvpBotWin(int n) {
+    public static void onPvpBotWin(int totalPlayers) {
         OfflineMission.addProgress(0, 1);
         PlayerInfo playerInfo = TerrainMidlet.myInfo;
         if (playerInfo != null) {
-            if (playerInfo.gun == 0) {
-                OfflineMission.addProgress(13, 1);
-            } else if (playerInfo.gun == 1) {
-                OfflineMission.addProgress(14, 1);
-            } else if (playerInfo.gun == 2) {
-                OfflineMission.addProgress(15, 1);
+            int g = playerInfo.gun;
+            if (g >= 0 && g < GUN_MISSION_COUNT) {
+                OfflineMission.addProgress(GUN_MISSION_START_ID + g, 1);
             }
         }
-        if (n > 5) {
-            OfflineMission.addProgress(17, 1);
+        if (totalPlayers > 5) {
+            OfflineMission.addProgress(26, 1);
         }
     }
 
@@ -147,9 +447,10 @@ public final class OfflineMission {
         mission.name = NAME[n];
         mission.reward = REWARD[n];
         mission.require = REQUIRE[n];
-        mission.have = progress[ID[n]] > REQUIRE[n] ? REQUIRE[n] : progress[ID[n]];
-        mission.isComplete = progress[ID[n]] >= REQUIRE[n];
-        mission.isGetReward = claimed[n];
+        int curProg = (mission.id >= 0 && mission.id < progress.length) ? progress[mission.id] : 0;
+        mission.have = curProg > REQUIRE[n] ? REQUIRE[n] : curProg;
+        mission.isComplete = curProg >= REQUIRE[n];
+        mission.isGetReward = (n >= 0 && n < claimed.length) && claimed[n];
         return mission;
     }
 
@@ -172,10 +473,11 @@ public final class OfflineMission {
             return;
         }
         playerInfo.cup += CUP[n3];
+        if (n3 < REWARD_XU.length) playerInfo.xu += REWARD_XU[n3];
+        if (n3 < REWARD_LUONG.length) playerInfo.luong += REWARD_LUONG[n3];
         OfflineCombat.grantExpDirect(EXP[n3]);
-        if (n == 18) {
-            playerInfo.xu += 1000;
-            playerInfo.luong += 100;
+
+        if (n == MISSION_ID_CLOUD_LINK) {
             int n4 = CRes.random(0, 5);
             OfflineSpecialShop.addMaterial((byte)(n4 * 10 + 9), 1);
         }
@@ -192,5 +494,40 @@ public final class OfflineMission {
         }
         return -1;
     }
-}
 
+    public static void applyRemoteConfig(String json) {
+        if (json == null || json.length() == 0) return;
+        try {
+            String missionsRaw = JsonLite.getArrayRaw(json, "missions");
+            Vector vec = JsonLite.splitArrayObjects(missionsRaw);
+            if (vec == null || vec.size() == 0) return;
+
+            for (int i = 0; i < vec.size(); ++i) {
+                String item = (String) vec.elementAt(i);
+                int mid = JsonLite.getInt(item, "id", -1);
+                int mlevel = JsonLite.getInt(item, "level", 1);
+                int idx = indexOf(mid, mlevel);
+                if (idx >= 0 && idx < NAME.length) {
+                    String name = JsonLite.getString(item, "name");
+                    if (name != null && name.length() > 0) NAME[idx] = name;
+                    int req = JsonLite.getInt(item, "require", -1);
+                    if (req > 0) REQUIRE[idx] = req;
+                    int exp = JsonLite.getInt(item, "reward_exp", -1);
+                    if (exp >= 0) EXP[idx] = exp;
+                    int xu = JsonLite.getInt(item, "reward_xu", -1);
+                    if (xu >= 0) REWARD_XU[idx] = xu;
+                    int luong = JsonLite.getInt(item, "reward_luong", -1);
+                    if (luong >= 0) REWARD_LUONG[idx] = luong;
+                    int cup = JsonLite.getInt(item, "reward_cup", -1);
+                    if (cup >= 0) CUP[idx] = cup;
+                    REWARD[idx] = "+" + (EXP[idx] >= 1000 ? (EXP[idx] / 1000 + "k") : EXP[idx]) + " xp, +" +
+                            (REWARD_XU[idx] >= 1000 ? (REWARD_XU[idx] / 1000 + "k") : REWARD_XU[idx]) + " xu, +" +
+                            REWARD_LUONG[idx] + " lượng";
+                }
+            }
+            System.out.println("[OfflineMission] Applied remote missions configuration successfully (" + vec.size() + " items)");
+        } catch (Exception e) {
+            System.err.println("[OfflineMission] Failed to parse remote missions: " + e.getMessage());
+        }
+    }
+}

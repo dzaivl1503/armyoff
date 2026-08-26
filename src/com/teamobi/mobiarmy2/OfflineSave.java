@@ -35,11 +35,18 @@ public final class OfflineSave {
     private static final int VERSION_EXP_CARD = 12;
     private static boolean editorLastSaveSuccessful;
 
-    private OfflineSave() {
+    public static String getSaveKey() {
+        if (CloudSaveApi.isLoggedIn()) {
+            String email = CloudSaveApi.getLinkedEmail();
+            if (email != null && email.trim().length() > 0) {
+                return "save_" + email.trim().toLowerCase();
+            }
+        }
+        return "offlineSave_v1";
     }
 
     public static boolean hasSave() {
-        byte[] byArray = RMS.loadRMS(RMS_KEY);
+        byte[] byArray = RMS.loadRMS(getSaveKey());
         if (byArray == null || byArray.length < 8) {
             return false;
         }
@@ -147,9 +154,18 @@ public final class OfflineSave {
             dataOutputStream.writeInt(OfflineMission.progress[18]);
             dataOutputStream.writeBoolean(OfflineMission.claimed[54]);
             OfflineTeamItems.writeExpCard(dataOutputStream);
+            dataOutputStream.writeShort(OfflineMission.progress.length);
+            for (n2 = 0; n2 < OfflineMission.progress.length; ++n2) {
+                dataOutputStream.writeInt(OfflineMission.progress[n2]);
+            }
+            dataOutputStream.writeShort(OfflineMission.claimed.length);
+            for (n2 = 0; n2 < OfflineMission.claimed.length; ++n2) {
+                dataOutputStream.writeBoolean(OfflineMission.claimed[n2]);
+            }
             dataOutputStream.close();
-            RMS.saveRMS(RMS_KEY, byteArrayOutputStream.toByteArray());
+            RMS.saveRMS(getSaveKey(), byteArrayOutputStream.toByteArray());
             editorLastSaveSuccessful = true;
+            CloudSaveApi.syncSaveSilently();
         }
         catch (Exception exception) {
             exception.printStackTrace();
@@ -157,7 +173,7 @@ public final class OfflineSave {
     }
 
     public static boolean load() {
-        byte[] byArray = RMS.loadRMS(RMS_KEY);
+        byte[] byArray = RMS.loadRMS(getSaveKey());
         if (byArray == null) {
             return false;
         }
@@ -329,6 +345,24 @@ public final class OfflineSave {
                 catch (EOFException eOFException) {
                 }
             }
+            try {
+                int progLen = dataInputStream.readShort();
+                for (n2 = 0; n2 < progLen; ++n2) {
+                    int pVal = dataInputStream.readInt();
+                    if (n2 < OfflineMission.progress.length) {
+                        OfflineMission.progress[n2] = pVal;
+                    }
+                }
+                int claimLen = dataInputStream.readShort();
+                for (n2 = 0; n2 < claimLen; ++n2) {
+                    boolean cVal = dataInputStream.readBoolean();
+                    if (n2 < OfflineMission.claimed.length) {
+                        OfflineMission.claimed[n2] = cVal;
+                    }
+                }
+            }
+            catch (EOFException eOFException) {
+            }
             dataInputStream.close();
             return true;
         }
@@ -349,7 +383,7 @@ public final class OfflineSave {
 
     public static byte[] exportBytes() {
         OfflineSave.save();
-        return RMS.loadRMS(RMS_KEY);
+        return RMS.loadRMS(getSaveKey());
     }
 
     public static boolean importBytes(byte[] byArray) {
@@ -357,7 +391,7 @@ public final class OfflineSave {
             return false;
         }
         try {
-            RMS.saveRMS(RMS_KEY, byArray);
+            RMS.saveRMS(getSaveKey(), byArray);
         }
         catch (Exception exception) {
             exception.printStackTrace();

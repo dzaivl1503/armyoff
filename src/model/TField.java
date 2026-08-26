@@ -273,78 +273,51 @@ public class TField {
     }
 
     public boolean keyPressed(int n) {
-        if (n != 8 && n != -8 && n != 204) {
-            this.holdCount = 0;
-            if (n >= 65 && n <= 122) {
-                isQwerty = true;
-                typingModeAreaWidth = 0;
-            }
-            if (isQwerty) {
-                if (n == 45) {
-                    if (n == this.lastKey && this.keyInActiveState < MAX_TIME_TO_CONFIRM_KEY[typeXpeed]) {
-                        this.text = this.text.substring(0, this.caretPos - 1) + '_';
-                        this.refreshTextView();
-                        this.lastKey = -1984;
-                        return false;
-                    }
-                    this.lastKey = 45;
-                }
-                if (n >= 32) {
-                    this.keyPressedAscii(n);
-                    return false;
-                }
-            }
-            if (n == changeModeKey) {
-                if (++mode > 3) {
-                    mode = 0;
-                }
-                this.keyInActiveState = 1;
-                this.lastKey = n;
-                return false;
-            }
-            if (n == 42) {
-                n = 58;
-            }
-            if (n == 35) {
-                n = 59;
-            }
-            if (n >= 48 && n <= 59) {
-                if (this.inputType != 0 && this.inputType != 2 && this.inputType != 3) {
-                    if (this.inputType == 1) {
-                        this.keyPressedAscii(n);
-                        this.keyInActiveState = 1;
-                    }
-                } else {
-                    this.keyPressedAny(n);
-                }
-            } else {
-                this.indexOfActiveChar = 0;
-                this.lastKey = -1984;
-                if (n == 14 && !this.lockArrow) {
-                    if (this.caretPos > 0) {
-                        --this.caretPos;
-                        this.setOffset();
-                        this.showCaretCounter = 10;
-                        return false;
-                    }
-                } else if (n == 15 && !this.lockArrow) {
-                    if (this.caretPos < this.text.length()) {
-                        ++this.caretPos;
-                        this.setOffset();
-                        this.showCaretCounter = 10;
-                        return false;
-                    }
-                } else {
-                    if (n == 19) {
-                        this.clear();
-                        return false;
-                    }
-                    this.lastKey = n;
-                }
-            }
+        if (n == 8 || n == -8 || n == 204 || n == 127) {
+            this.clear();
             return true;
         }
-        this.clear();
+        this.holdCount = 0;
+        isQwerty = true;
+        typingModeAreaWidth = 0;
+        if (n >= 32 && n <= 126) {
+            this.keyPressedAscii(n);
+            return false;
+        }
+        if (n == 14 || n == -3) {
+            if (this.caretPos > 0) {
+                --this.caretPos;
+                this.setOffset();
+                this.showCaretCounter = 10;
+                return false;
+            }
+        } else if (n == 15 || n == -4) {
+            if (this.caretPos < this.text.length()) {
+                ++this.caretPos;
+                this.setOffset();
+                this.showCaretCounter = 10;
+                return false;
+            }
+        } else if (n == 19) {
+            this.clear();
+            return false;
+        }
+        if (n == 42) {
+            n = 58;
+        }
+        if (n == 35) {
+            n = 59;
+        }
+        if (n >= 48 && n <= 59) {
+            if (this.inputType != 0 && this.inputType != 2 && this.inputType != 3) {
+                if (this.inputType == 1) {
+                    this.keyPressedAscii(n);
+                    this.keyInActiveState = 1;
+                }
+            } else {
+                this.keyPressedAny(n);
+            }
+        }
         return true;
     }
 

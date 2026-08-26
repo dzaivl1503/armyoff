@@ -206,7 +206,13 @@ extends CScreen {
 
     private void doExit() {
         CCanvas.curScr = null;
-        lastSCreen.show();
+        if (lastSCreen != null) {
+            lastSCreen.show();
+        } else if (CCanvas.menuScr != null) {
+            CCanvas.menuScr.show();
+        } else if (CCanvas.mainMenuScr != null) {
+            CCanvas.mainMenuScr.show();
+        }
     }
 
     public void paint(mGraphics mGraphics2) {
@@ -221,7 +227,11 @@ extends CScreen {
         mGraphics2.fillRect(0, 0, CCanvas.width, 25 + ITEM_HEIGHT, false);
         mGraphics2.setColor(1407674);
         mGraphics2.fillRect(0, 25, CCanvas.width, ITEM_HEIGHT, false);
-        if (this.type != 5) {
+        if (this.typeList != null && this.typeList.length() > 0) {
+            Font.bigFont.drawString(mGraphics2, this.typeList, CCanvas.width / 2, 3, mGraphics.HCENTER | mGraphics.TOP);
+            Font.normalYFont.drawString(mGraphics2, Language.name(), 10, 28, 0);
+            Font.normalYFont.drawString(mGraphics2, this.typeList, CCanvas.width - 10, 28, 1);
+        } else if (this.type != 5) {
             if (this.type > 0) {
                 Font.bigFont.drawString(mGraphics2, this.title[this.type], CCanvas.width / 2, 3, mGraphics.HCENTER | mGraphics.TOP);
                 Font.normalYFont.drawString(mGraphics2, Language.name(), 10, 28, 0);
