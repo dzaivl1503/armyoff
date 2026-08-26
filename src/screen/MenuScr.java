@@ -39,9 +39,12 @@ import screen.LevelScreen;
 import screen.LoginScr;
 import screen.MissionScreen;
 import screen.PrepareScr;
-import screen.SquadSelectScr;
+import shop.OfflineShopEquip;
+import shop.ShopBietDoi;
 import shop.ShopEquipment;
 import shop.ShopItem;
+import shop.ShopLinhTinh;
+import com.teamobi.mobiarmy2.OfflineSpecialShop;
 
 public class MenuScr
 extends CScreen {
@@ -168,16 +171,19 @@ extends CScreen {
         curMenuLevel = 0;
         curMenuSelect = 0;
         curSubMenuSelect = 0;
+        if (subMenuString == null || subMenuString.length < 10) {
+            subMenuString = new String[10][];
+        }
         if (n == 0) {
             MENU_CHOINGAY = 0;
-            MENU_DANGNHAP = 1;
+            MENU_CUAHANG = 1;
             MENU_TINTUC = (byte)2;
-            MENU_CAUHINH = (byte)3;
-            MENU_GIOITHIEU = (byte)4;
-            MENU_PHIENBAN = (byte)5;
-            MENU_CUAHANG = (byte)-1;
+            MENU_DANGNHAP = (byte)3;
+            MENU_CAUHINH = (byte)4;
+            MENU_GIOITHIEU = (byte)5;
+            MENU_PHIENBAN = (byte)6;
             MENU_QUANGCAO = (byte)-1;
-            menuString = new String[]{Language.startGame(), "CLOUD SAVE", "BẢNG XẾP HẠNG", "CÀI ĐẶT", "GIỚI THIỆU", "PHIÊN BẢN"};
+            menuString = new String[]{Language.startGame(), Language.CUAHANG(), "BẢNG XẾP HẠNG", "CLOUD SAVE", "CÀI ĐẶT", "GIỚI THIỆU", "PHIÊN BẢN"};
             MENU_LAPDOI = (byte)7;
             boolean bl = TerrainMidlet.myInfo != null && TerrainMidlet.myInfo.getSquadSize() > 0;
             MenuScr.subMenuString[MenuScr.MENU_LAPDOI] = bl ? new String[]{"CHỌN THÀNH VIÊN", "ĐỔI NHÂN VẬT"} : new String[]{"CHỌN THÀNH VIÊN"};
@@ -192,6 +198,7 @@ extends CScreen {
             menuString = new String[]{Language.startGame(), Language.CUAHANG(), Language.information()};
         }
         MenuScr.subMenuString[MenuScr.MENU_CHOINGAY] = new String[]{"CHƠI NGAY", Language.selectCharactor(), "LẬP ĐỘI", Language.CUAHANG(), Language.NANGCAP(), Language.INVENTORY(), "CHỌN ITEM"};
+        MenuScr.subMenuString[MenuScr.MENU_CUAHANG] = new String[]{Language.shop(), Language.shop_eq(), Language.DODACBIET(), Language.ITEM_DOI()};
         if (MENU_TINTUC >= 0) {
             MenuScr.subMenuString[MenuScr.MENU_TINTUC] = OfflineLeaderboard.TOP_MENU_LABELS;
         }
@@ -537,12 +544,15 @@ extends CScreen {
             if (this.select == MENU_CHOINGAY) {
                 this.hide = false;
                 this.activeCroll(1, this.select);
+            } else if (MENU_CUAHANG >= 0 && this.select == MENU_CUAHANG) {
+                this.hide = false;
+                this.activeCroll(1, this.select);
+            } else if (MENU_TINTUC >= 0 && this.select == MENU_TINTUC) {
+                this.hide = false;
+                this.activeCroll(1, this.select);
             } else if (MENU_DANGNHAP >= 0 && this.select == MENU_DANGNHAP) {
                 this.hide = true;
                 this.doOpenCloudLogin();
-            } else if (this.select == MENU_TINTUC) {
-                this.hide = false;
-                this.activeCroll(1, this.select);
             } else if (MENU_CAUHINH >= 0 && this.select == MENU_CAUHINH) {
                 this.hide = true;
                 if (CCanvas.settingsScr == null) {
@@ -792,24 +802,28 @@ extends CScreen {
 
     private void doShopMenuSelect() {
         switch (this.select) {
-            case 0: {
+            case 0: { // Shop Item
                 this.hide = true;
                 this.doShowShopItem();
                 break;
             }
-            case 1: {
+            case 1: { // Shop Trang bi
                 this.hide = true;
-                GameService.gI().getShopEquip();
+                OfflineShopEquip.openShop();
                 break;
             }
-            case 2: {
+            case 2: { // Shop Do dac biet / Linh tinh
                 this.hide = true;
-                GameService.gI().getShopLinhtinh((byte)0, (byte)-1, (byte)-1, (byte)-1);
+                if (CCanvas.shopLinhtinh == null) {
+                    CCanvas.shopLinhtinh = new ShopLinhTinh();
+                }
+                OfflineSpecialShop.shop((byte)0, (byte)-1, (byte)-1, (byte)-1);
                 break;
             }
-            case 3: {
+            case 3: { // Shop Biet doi / Item doi
                 this.hide = true;
-                GameService.gI().getShopBietDoi((byte)0, (byte)-1, (byte)-1);
+                OfflineTeamItems.shop((byte)0, (byte)-1, (byte)-1);
+                break;
             }
         }
     }
