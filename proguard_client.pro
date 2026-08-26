@@ -11,14 +11,16 @@
 -libraryjars lib/microemu-jsr-135.jar
 -libraryjars lib/microemulator.jar
 
+-dontoptimize
+-dontshrink
+-dontusemixedcaseclassnames
+-keeppackagenames
+-useuniqueclassmembernames
 -dontwarn **
 -dontnote **
 -ignorewarnings
 
--microedition
--overloadaggressively
--repackageclasses ''
--allowaccessmodification
+-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod,StackMapTable,StackMap
 
 -keep public class com.teamobi.mobiarmy2.GameMidlet {
     public *;
