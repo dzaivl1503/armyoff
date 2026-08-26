@@ -2173,13 +2173,6 @@ public class CPlayer {
 
             short[][][] fullPaths = OfflineBulletSim.buildAllPaths(this, bulletType, (byte)maxF, (byte)maxF2, isPow);
 
-            short[][][] curPaths = null;
-            if (this.force > 0) {
-                int curF = this.force;
-                int curF2 = this.force_2 > 0 ? this.force_2 : maxF2;
-                curPaths = OfflineBulletSim.buildAllPaths(this, bulletType, (byte)curF, (byte)curF2, isPow);
-            }
-
             if (fullPaths != null && fullPaths.length > 0) {
                 for (int p = 0; p < fullPaths.length; ++p) {
                     if (fullPaths[p] == null || fullPaths[p].length < 2 || fullPaths[p][0] == null || fullPaths[p][1] == null) {
@@ -2192,60 +2185,90 @@ public class CPlayer {
                         continue;
                     }
 
-                    int colorOuter = (p == 0) ? (isPow ? 0xFF0033 : 0xFF3300) : 0x00A2FF;
-                    int colorCore = (p == 0) ? (isPow ? 0xFF9900 : 0xFFFF00) : 0x00FFFF;
+                    int colorCore = (p == 0) ? (isPow ? 0xFF3300 : 0xFFFF00) : 0x00E5FF;
 
+                    // 1. Sleek 1px line
                     for (int i = 1; i < len; ++i) {
-                        short x0 = xs[i - 1];
-                        short y0 = ys[i - 1];
-                        short x1 = xs[i];
-                        short y1 = ys[i];
-
-                        mGraphics2.setColor(colorOuter);
-                        mGraphics2.drawLine(x0, y0 - 1, x1, y1 - 1, false);
-                        mGraphics2.drawLine(x0, y0 + 1, x1, y1 + 1, false);
-                        mGraphics2.drawLine(x0 - 1, y0, x1 - 1, y1, false);
-                        mGraphics2.drawLine(x0 + 1, y0, x1 + 1, y1, false);
-
                         mGraphics2.setColor(colorCore);
-                        mGraphics2.drawLine(x0, y0, x1, y1, false);
+                        mGraphics2.drawLine(xs[i - 1], ys[i - 1], xs[i], ys[i], false);
+                    }
 
-                        if (p == 0 && i % 10 == 0 && i < len - 4) {
-                            mGraphics2.setColor(0xFFFFFF);
-                            mGraphics2.fillRect(x1 - 1, y1 - 1, 3, 3, false);
-                            Font.normalGFont.drawString(mGraphics2, String.valueOf(i), x1, y1 + 4, 65);
+                    // 2. Main trajectory: partition forces 1..30 and draw force numbers on the line
+                    if (p == 0) {
+                        int totalPathDist = 0;
+                        for (int i = 1; i < len; ++i) {
+                            int dX = xs[i] - xs[i - 1];
+                            int dY = ys[i] - ys[i - 1];
+                            totalPathDist += (int)Math.sqrt(dX * dX + dY * dY);
+                        }
+                        int distPerForce = totalPathDist / Math.max(1, maxF);
+
+                        for (int f = 1; f <= maxF; ++f) {
+                            int idx = (int)((long)f * (len - 1) / maxF);
+                            if (idx < 0) {
+                                idx = 0;
+                            }
+                            if (idx >= len) {
+                                idx = len - 1;
+                            }
+
+                            short fx = xs[idx];
+                            short fy = ys[idx];
+
+                            int p0 = Math.max(0, idx - 1);
+                            int p1 = Math.min(len - 1, idx + 1);
+                            int dx = xs[p1] - xs[p0];
+                            int dy = ys[p1] - ys[p0];
+                            int hyp = (int)Math.sqrt(dx * dx + dy * dy);
+                            if (hyp == 0) {
+                                hyp = 1;
+                            }
+
+                            int nx = -dy * 3 / hyp;
+                            int ny = dx * 3 / hyp;
+
+                            boolean isMajor = (f % 5 == 0) || (f == maxF);
+
+                            if (isMajor) {
+                                mGraphics2.setColor(0xFFFFFF);
+                                mGraphics2.drawLine(fx - nx * 4 / 3, fy - ny * 4 / 3, fx + nx * 4 / 3, fy + ny * 4 / 3, false);
+                                mGraphics2.fillRect(fx - 1, fy - 1, 3, 3, false);
+                            } else {
+                                mGraphics2.setColor(isPow ? 0xFF8866 : 0xFFEE77);
+                                mGraphics2.drawLine(fx - nx, fy - ny, fx + nx, fy + ny, false);
+                            }
+
+                            boolean showNumber = false;
+                            if (distPerForce >= 14) {
+                                showNumber = true;
+                            } else if (distPerForce >= 7) {
+                                showNumber = (f % 2 == 0) || isMajor;
+                            } else {
+                                showNumber = isMajor;
+                            }
+
+                            if (showNumber && idx < len - 2) {
+                                int textX = fx;
+                                int textY = fy - 10;
+                                if (isMajor) {
+                                    Font.smallFontYellow.drawString(mGraphics2, String.valueOf(f), textX, textY, 2);
+                                } else {
+                                    Font.smallFont.drawString(mGraphics2, String.valueOf(f), textX, textY, 2);
+                                }
+                            }
                         }
                     }
 
+                    // 3. Compact neat landing marker
                     short lastX = xs[len - 1];
                     short lastY = ys[len - 1];
 
-                    mGraphics2.setColor(0xFF0033);
-                    mGraphics2.drawRect(lastX - 4, lastY - 4, 8, 8, false);
-                    mGraphics2.drawRect(lastX - 5, lastY - 5, 10, 10, false);
-
+                    mGraphics2.setColor(isPow ? 0xFF0033 : 0xFF2200);
+                    mGraphics2.drawRect(lastX - 2, lastY - 2, 4, 4, false);
                     mGraphics2.setColor(0xFFFF00);
-                    mGraphics2.drawLine(lastX - 6, lastY, lastX + 6, lastY, false);
-                    mGraphics2.drawLine(lastX, lastY - 6, lastX, lastY + 6, false);
+                    mGraphics2.drawLine(lastX - 3, lastY, lastX + 3, lastY, false);
+                    mGraphics2.drawLine(lastX, lastY - 3, lastX, lastY + 3, false);
                     mGraphics2.fillRect(lastX - 1, lastY - 1, 3, 3, false);
-
-                    if (curPaths != null && p < curPaths.length && curPaths[p] != null && curPaths[p].length >= 2 && curPaths[p][0] != null && curPaths[p][1] != null) {
-                        short[] cxs = curPaths[p][0];
-                        short[] cys = curPaths[p][1];
-                        int clen = Math.min(cxs.length, cys.length);
-                        if (clen >= 2) {
-                            for (int i = 1; i < clen; ++i) {
-                                mGraphics2.setColor(0xFFFFFF);
-                                mGraphics2.drawLine(cxs[i - 1], cys[i - 1], cxs[i], cys[i], false);
-                            }
-                            short headX = cxs[clen - 1];
-                            short headY = cys[clen - 1];
-                            mGraphics2.setColor(0x00FF00);
-                            mGraphics2.drawRect(headX - 3, headY - 3, 6, 6, false);
-                            mGraphics2.setColor(0xFFFFFF);
-                            mGraphics2.fillRect(headX - 1, headY - 1, 3, 3, false);
-                        }
-                    }
                 }
                 return;
             }
@@ -2268,13 +2291,11 @@ public class CPlayer {
             if (nextX < -50 || nextX > MM.mapWidth + 50 || nextY > MM.mapHeight + 50) {
                 break;
             }
-            mGraphics2.setColor(0xFF2200);
-            mGraphics2.drawLine(curX, curY + 1, nextX, nextY + 1, false);
             mGraphics2.setColor(0xFFFF00);
             mGraphics2.drawLine(curX, curY, nextX, nextY, false);
             if (GameScr.mm != null && GameScr.mm.isLand(nextX, nextY)) {
                 mGraphics2.setColor(0xFF0000);
-                mGraphics2.drawRect(nextX - 4, nextY - 4, 8, 8, false);
+                mGraphics2.drawRect(nextX - 2, nextY - 2, 4, 4, false);
                 mGraphics2.setColor(0xFFFF00);
                 mGraphics2.fillRect(nextX - 1, nextY - 1, 3, 3, false);
                 break;
